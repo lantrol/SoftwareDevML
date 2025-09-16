@@ -2,11 +2,27 @@ import shutil
 import os
 import zipfile
 import string
+import requests
 
+dataset_url = "https://www.kaggle.com/api/v1/datasets/download/sujaykapadnis/smoking"
 data_path = "../data/"
+raw_data_path = "../data/raw/"
 file_name = "archive.zip"
 
-zip_file = zipfile.ZipFile(data_path + file_name, 'r')
+# Initial setup
+if not os.path.exists(data_path):
+    os.mkdir(data_path)
+if not os.path.exists(raw_data_path):
+    os.mkdir(raw_data_path)
+
+# Download dataset
+if not os.path.exists(raw_data_path + file_name):
+    print("Dataset not found, downloading...")
+    req = requests.get(dataset_url, allow_redirects=True)
+    open(raw_data_path + file_name, "wb+").write(req.content)
+    print("Download completed!")
+
+zip_file = zipfile.ZipFile(raw_data_path + file_name, 'r')
 
 for set in ["train", "test", "val"]:
     if os.path.isdir(data_path + set):
