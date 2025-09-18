@@ -27,3 +27,6 @@ if __name__ == "__main__":
 
     # Show a batch of training images
     show_batch(train_loader, dm.train_dataset.classes, n=8)
+
+    print(torchvision.__version__)
+    print(plt.__version__)
