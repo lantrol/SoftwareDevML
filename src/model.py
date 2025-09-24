@@ -31,9 +31,9 @@ class VGG11(pl.LightningModule):
         self.lr = lr
 
     def forward(self, x):
-        with torch.no_grad():
-            feats = self.feature_extractor(x)
-            feats = torch.flatten(feats, 1)
+        #with torch.no_grad():
+        feats = self.feature_extractor(x)
+        feats = torch.flatten(feats, 1)
         out = self.classifier(feats)
         return out
 
@@ -41,6 +41,7 @@ class VGG11(pl.LightningModule):
         xb, yb = batch
         out = self(xb)
         loss = self.loss_fn(out, yb)
+        self.log("train_loss", loss, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -62,12 +63,27 @@ class VGG11(pl.LightningModule):
 
 
 if __name__ == "__main__":
-    data_module = SmokerDataModule(data_dir="../data", batch_size=32) 
+    # --- Check GPU availability ---
+    accelerator = "gpu" if torch.cuda.is_available() else "cpu"
+    devices = 1 if torch.cuda.is_available() else None
+    print(f"Using accelerator: {accelerator}, devices: {devices or 'CPU'}")
+
+    # --- Initialize data module and model ---
+    data_module = SmokerDataModule(data_dir="../data", batch_size=32, num_workers=0) 
     net = VGG11()
 
-    # Trainer
-    trainer = pl.Trainer(max_epochs=3, accelerator="auto", devices="auto", )
+    # --- Trainer ---
+    trainer = pl.Trainer(
+        max_epochs=3,
+        accelerator=accelerator,
+        devices=devices,
+        enable_progress_bar=True,   # show progress bar
+        log_every_n_steps=10        # logs every 10 steps
+    )
 
-    # Train/test
+    # --- Train and test ---
+    print("Starting training...")
     trainer.fit(net, datamodule=data_module)
+    print("Training finished.\nStarting testing...")
     trainer.test(net, datamodule=data_module)
+    print("Testing finished.")

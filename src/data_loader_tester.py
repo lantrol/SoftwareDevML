@@ -12,7 +12,7 @@ def show_batch(loader, class_names, n=8):
     plt.show()
 
 if __name__ == "__main__":
-    dm = SmokerDataModule(data_dir="../data", batch_size=16)
+    dm = SmokerDataModule(data_dir="../data", batch_size=16, num_workers=0)
     dm.setup()
 
     print("Class to index mapping:", dm.train_dataset.class_to_idx)
@@ -29,4 +29,3 @@ if __name__ == "__main__":
     show_batch(train_loader, dm.train_dataset.classes, n=8)
 
     print(torchvision.__version__)
-    print(plt.__version__)
