@@ -5,6 +5,7 @@ import random
 from tqdm import tqdm
 from data_loader import SmokerDataModule
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
 
 
 # Model (unchanged)
@@ -49,7 +50,7 @@ class VGG11(pl.LightningModule):
         out = self(xb)
         preds = out.argmax(1)
         acc = (preds == yb).float().mean()
-        self.log('val_acc', acc, prog_bar=True)
+        self.log('val_acc', acc, prog_bar=True, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         xb, yb = batch
@@ -72,13 +73,23 @@ if __name__ == "__main__":
     data_module = SmokerDataModule(data_dir="../data", batch_size=32, num_workers=0) 
     net = VGG11()
 
+    # --- Checkpoint callback ---
+    checkpoint_callback = ModelCheckpoint(
+        dirpath="checkpoints",      # folder to save in
+        filename="vgg11-smoker-{epoch:02d}-{val_acc:.2f}",
+        save_top_k=1,               # only keep best model
+        monitor="val_acc",         # save best according to validation loss
+        mode="max"
+    )
+
     # --- Trainer ---
     trainer = pl.Trainer(
-        max_epochs=3,
+        max_epochs=10,
         accelerator=accelerator,
         devices=devices,
         enable_progress_bar=True,   # show progress bar
-        log_every_n_steps=10        # logs every 10 steps
+        log_every_n_steps=10,        # logs every 10 steps
+        callbacks=[checkpoint_callback]
     )
 
     # --- Train and test ---
@@ -87,3 +98,6 @@ if __name__ == "__main__":
     print("Training finished.\nStarting testing...")
     trainer.test(net, datamodule=data_module)
     print("Testing finished.")
+
+    print(f"Best checkpoint saved at: {checkpoint_callback.best_model_path}")
+
