@@ -98,7 +98,6 @@ def simple_calibration_plot(model, dataloader, device='cuda', n_bins=10):
         'true_labels': y_true
     }
 
-
 # Example usage
 if __name__ == "__main__":
     from pathlib import Path
@@ -120,3 +119,6 @@ if __name__ == "__main__":
     
     # Analyze calibration
     results = simple_calibration_plot(model, data_module.test_dataloader(), device)
+
+    # Analyze worst examples
+    show_high_loss_samples(model, data_module.test_dataloader(), device, top_k=5)
