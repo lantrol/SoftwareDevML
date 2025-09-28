@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import pytorch_lightning as pl
+import os
 
 from model import VGG11
 from data_loader import SmokerDataModule
@@ -12,9 +13,10 @@ from data_loader import SmokerDataModule
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # --- Load checkpoint ---
-BASE_DIR = Path(__file__).parent   # folder where this script lives
-CHECKPOINT_DIR = BASE_DIR / "checkpoints"
+BASE_DIR = Path(__file__).parent          # -> SoftwareDevML/src
+CHECKPOINT_DIR = BASE_DIR.parent / "checkpoints"  # -> SoftwareDevML/checkpoints
 ckpt_path = CHECKPOINT_DIR / "vgg11-smoker-epoch=02-val_acc=0.88.ckpt"
+print("Resolved checkpoint path:", ckpt_path)
 model = VGG11.load_from_checkpoint(ckpt_path)
 model = model.to(device)
 model.eval()
