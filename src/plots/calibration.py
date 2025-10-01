@@ -6,8 +6,8 @@ from sklearn.metrics import brier_score_loss
 from tqdm import tqdm
 from pathlib import Path
 
-from model import VGG11
-from data_loader import SmokerDataModule
+from src.modeling.model import VGG11
+from src.data_loader import SmokerDataModule
 
 def simple_calibration_plot(model, dataloader, device='cuda', n_bins=10):
     """
@@ -48,7 +48,8 @@ def simple_calibration_plot(model, dataloader, device='cuda', n_bins=10):
         plt.tight_layout()
 
         BASE_DIR = Path(__file__).parent
-        REPORTS_DIR = BASE_DIR.parent / "reports" / "figures"
+        PROJECT_ROOT = BASE_DIR.parent.parent        # src
+        REPORTS_DIR = PROJECT_ROOT.parent / "reports" / "figures"
         REPORTS_DIR.mkdir(parents=True, exist_ok=True)
         
         save_path = REPORTS_DIR / "calibration_plot.png"
@@ -79,7 +80,8 @@ def simple_calibration_plot(model, dataloader, device='cuda', n_bins=10):
             brier_scores.append(brier_score_loss(binary_true, y_prob[:, i]))
         
         BASE_DIR = Path(__file__).parent
-        REPORTS_DIR = BASE_DIR.parent / "reports" / "figures"
+        PROJECT_ROOT = BASE_DIR.parent.parent        # src
+        REPORTS_DIR = PROJECT_ROOT.parent / "reports" / "figures"
         REPORTS_DIR.mkdir(parents=True, exist_ok=True)
         
         save_path = REPORTS_DIR / "calibration_plot_multiclass.png"
@@ -160,28 +162,3 @@ def show_high_loss_samples(model, dataloader, device='cuda', top_k=5):
         ax.axis('off')
     plt.tight_layout()
     plt.show()
-    
-# Example usage
-if __name__ == "__main__":
-    from pathlib import Path
-    # Load your model
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    # Load checkpoint
-    BASE_DIR = Path(__file__).parent
-    CHECKPOINT_DIR = BASE_DIR.parent / "checkpoints"
-    ckpt_path = CHECKPOINT_DIR / "vgg11-smoker-epoch=02-val_acc=0.88.ckpt"
-    
-    model = VGG11.load_from_checkpoint(ckpt_path)
-    model = model.to(device)
-    model.eval()
-    
-    # Load data
-    data_module = SmokerDataModule(data_dir="../data", batch_size=32, num_workers=0)
-    data_module.setup()
-    
-    # Analyze calibration
-    results = simple_calibration_plot(model, data_module.test_dataloader(), device)
-
-    # Analyze worst examples
-    show_high_loss_samples(model, data_module.test_dataloader(), device, top_k=5)

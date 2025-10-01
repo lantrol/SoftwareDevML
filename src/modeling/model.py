@@ -3,7 +3,7 @@ from torchvision import datasets, transforms, models
 from torch.utils.data import Subset
 import random
 from tqdm import tqdm
-from data_loader import SmokerDataModule
+from src.data_loader import SmokerDataModule
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 import pickle
@@ -89,60 +89,3 @@ class VGG11(pl.LightningModule):
 
     def configure_optimizers(self):
         return optim.Adam(self.classifier.parameters(), lr=self.lr)
-
-
-if __name__ == "__main__":
-    # --- Check GPU availability ---
-    accelerator = "gpu" if torch.cuda.is_available() else "cpu"
-    devices = 1 if torch.cuda.is_available() else None
-    print(f"Using accelerator: {accelerator}, devices: {devices or 'CPU'}")
-
-    # --- Initialize data module and model ---
-    data_module = SmokerDataModule(data_dir="../data", batch_size=32, num_workers=0) 
-    net = VGG11()
-
-    # --- Checkpoint callback ---
-    checkpoint_callback = ModelCheckpoint(
-        dirpath="checkpoints",      # folder to save in
-        filename="vgg11-smoker-{epoch:02d}-{val_acc:.2f}",
-        save_top_k=1,               # only keep best model
-        monitor="val_acc",         # save best according to validation accuracy
-        mode="max"
-    )
-
-    # --- Trainer ---
-    trainer = pl.Trainer(
-        max_epochs=10,
-        accelerator=accelerator,
-        devices=devices,
-        enable_progress_bar=True,   # show progress bar
-        log_every_n_steps=10,        # logs every 10 steps
-        callbacks=[checkpoint_callback]
-    )
-
-    # --- Train and test ---
-    print("Starting training...")
-    trainer.fit(net, datamodule=data_module)
-    print("Training finished.\nStarting testing...")
-    trainer.test(net, datamodule=data_module)
-    print("Testing finished.")
-
-    print(f"Best checkpoint saved at: {checkpoint_callback.best_model_path}")
-    
-    # Save metrics to file for plotting
-    metrics_data = {
-        'train_losses': net.train_losses,
-        'val_losses': net.val_losses,
-        'val_accs': net.val_accs
-    }
-
-    # Define relative path
-    save_dir = os.path.join('reports', 'data')
-    save_path = os.path.join(save_dir, 'training_metrics.pkl')
-
-    # Make sure the directory exists
-    os.makedirs(save_dir, exist_ok=True)
-
-    with open(save_path, 'wb') as f:
-        pickle.dump(metrics_data, f)
-    print(f"Training metrics saved to '{save_path}'")

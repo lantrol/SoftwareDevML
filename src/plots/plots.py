@@ -6,7 +6,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import pytorch_lightning as pl
 import numpy as np
 
-from model import VGG11
+from modeling.model import VGG11
 from data_loader import SmokerDataModule
 
 # --- Device ---
