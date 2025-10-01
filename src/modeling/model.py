@@ -12,6 +12,34 @@ import os
 
 # Model with enhanced logging
 class VGG11(pl.LightningModule):
+    """
+    PyTorch Lightning module implementing a VGG11-based binary classifier.
+
+    This model uses a pretrained VGG11 backbone with frozen feature layers and 
+    trains a new linear classifier on top for binary classification.
+
+    Parameters
+    ----------
+    lr : float, optional
+        Learning rate for the optimizer (default is 1e-3).
+
+    Attributes
+    ----------
+    feature_extractor : nn.Sequential
+        Pretrained VGG11 feature layers with gradients frozen.
+    classifier : nn.Linear
+        Linear layer for binary classification.
+    loss_fn : nn.CrossEntropyLoss
+        Cross-entropy loss function.
+    lr : float
+        Learning rate.
+    train_losses : list
+        Logged training losses per epoch.
+    val_losses : list
+        Logged validation losses per epoch.
+    val_accs : list
+        Logged validation accuracies per epoch.
+    """
     def __init__(self, lr=1e-3):
         super().__init__()
         num_classes = 2
@@ -39,12 +67,40 @@ class VGG11(pl.LightningModule):
         self.val_accs = []
 
     def forward(self, x):
+        """
+        Forward pass through feature extractor and classifier.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor of shape (batch_size, channels, height, width).
+
+        Returns
+        -------
+        torch.Tensor
+            Output logits of shape (batch_size, num_classes).
+        """
         feats = self.feature_extractor(x)
         feats = torch.flatten(feats, 1)
         out = self.classifier(feats)
         return out
 
     def training_step(self, batch, batch_idx):
+        """
+        Training step for a single batch.
+
+        Parameters
+        ----------
+        batch : tuple
+            Tuple of input tensors and labels (xb, yb).
+        batch_idx : int
+            Index of the batch.
+
+        Returns
+        -------
+        torch.Tensor
+            Training loss for this batch.
+        """
         xb, yb = batch
         out = self(xb)
         loss = self.loss_fn(out, yb)
@@ -52,6 +108,21 @@ class VGG11(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
+        """
+        Validation step for a single batch.
+
+        Parameters
+        ----------
+        batch : tuple
+            Tuple of input tensors and labels (xb, yb).
+        batch_idx : int
+            Index of the batch.
+
+        Returns
+        -------
+        dict
+            Dictionary with keys 'val_loss' and 'val_acc'.
+        """
         xb, yb = batch
         out = self(xb)
         loss = self.loss_fn(out, yb)
@@ -65,12 +136,14 @@ class VGG11(pl.LightningModule):
         return {"val_loss": loss, "val_acc": acc}
 
     def on_train_epoch_end(self):
+        """Callback at the end of a training epoch to log epoch loss."""
         # Get the logged training loss for this epoch
         train_loss = self.trainer.callback_metrics.get('train_loss')
         if train_loss is not None:
             self.train_losses.append(train_loss.item())
 
     def on_validation_epoch_end(self):
+        """Callback at the end of a validation epoch to log metrics."""
         # Get the logged validation metrics for this epoch
         val_loss = self.trainer.callback_metrics.get('val_loss')
         val_acc = self.trainer.callback_metrics.get('val_acc')
@@ -81,6 +154,16 @@ class VGG11(pl.LightningModule):
             self.val_accs.append(val_acc.item())
 
     def test_step(self, batch, batch_idx):
+        """
+        Test step for a single batch.
+
+        Parameters
+        ----------
+        batch : tuple
+            Tuple of input tensors and labels (xb, yb).
+        batch_idx : int
+            Index of the batch.
+        """
         xb, yb = batch
         out = self(xb)
         preds = out.argmax(1)
@@ -88,4 +171,12 @@ class VGG11(pl.LightningModule):
         self.log('test_acc', acc, prog_bar=True, on_epoch=True)
 
     def configure_optimizers(self):
+        """
+        Configure the optimizer.
+
+        Returns
+        -------
+        torch.optim.Optimizer
+            Adam optimizer for the classifier parameters.
+        """
         return optim.Adam(self.classifier.parameters(), lr=self.lr)

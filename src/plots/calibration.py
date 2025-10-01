@@ -11,7 +11,26 @@ from src.data_loader import SmokerDataModule
 
 def simple_calibration_plot(model, dataloader, device='cuda', n_bins=10):
     """
-    Simplified version that directly uses sklearn CalibrationDisplay with arrays
+    Generate a calibration plot (reliability diagram) for a trained model.
+
+    Parameters
+    ----------
+    model : VGG11
+        Trained PyTorch Lightning model.
+    dataloader : torch.utils.data.DataLoader
+        DataLoader providing input images and labels.
+    device : str, optional
+        Device to run inference on ("cpu" or "cuda"), by default 'cuda'.
+    n_bins : int, optional
+        Number of bins for the calibration plot, by default 10.
+
+    Returns
+    -------
+    dict
+        Dictionary containing:
+        - 'brier_score': float, Brier score of the model
+        - 'predicted_probabilities': np.ndarray, model probabilities
+        - 'true_labels': np.ndarray, true labels
     """
     print("Collecting predictions...")
     
@@ -102,10 +121,24 @@ def simple_calibration_plot(model, dataloader, device='cuda', n_bins=10):
 
 def get_high_loss_samples(y_true, y_prob, top_k=5):
     """
-    Returns indices and details of the top_k samples with highest Brier loss.
-    
-    y_true: np.array of shape (N,) with true labels
-    y_prob: np.array of shape (N, num_classes) with predicted probabilities
+    Identify samples with the highest per-sample Brier loss.
+
+    Parameters
+    ----------
+    y_true : np.ndarray, shape (N,)
+        True labels.
+    y_prob : np.ndarray, shape (N, num_classes)
+        Predicted probabilities for each class.
+    top_k : int, optional
+        Number of top-loss samples to return, by default 5.
+
+    Returns
+    -------
+    tuple
+        - top_indices : np.ndarray
+            Indices of the top-k highest loss samples.
+        - top_losses : np.ndarray
+            Brier loss values for the top-k samples.
     """
     # For binary classification
     if y_prob.shape[1] == 2:
@@ -126,6 +159,25 @@ def get_high_loss_samples(y_true, y_prob, top_k=5):
     return top_indices, per_sample_loss[top_indices]
 
 def show_high_loss_samples(model, dataloader, device='cuda', top_k=5):
+    """
+    Display the top-k samples with the highest Brier loss.
+
+    Parameters
+    ----------
+    model : VGG11
+        Trained PyTorch Lightning model.
+    dataloader : torch.utils.data.DataLoader
+        DataLoader providing input images and labels.
+    device : str, optional
+        Device to run inference on ("cpu" or "cuda"), by default 'cuda'.
+    top_k : int, optional
+        Number of highest-loss samples to display, by default 5.
+
+    Side Effects
+    ------------
+    - Prints indices, losses, true labels, and predicted probabilities of top-loss samples.
+    - Displays images of the top-k high-loss samples using matplotlib.
+    """
     model.eval()
     all_probs = []
     all_labels = []

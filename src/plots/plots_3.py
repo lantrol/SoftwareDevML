@@ -4,12 +4,29 @@ import numpy as np
 import os
 
 def plot_training_metrics(metrics_file='training_metrics.pkl', save_path='training_metrics.png'):
+    import matplotlib.pyplot as plt
+import pickle
+import numpy as np
+import os
+
+def plot_training_metrics(metrics_file='training_metrics.pkl', save_path='training_metrics.png'):
     """
-    Plot training and validation metrics from saved data
-    
-    Args:
-        metrics_file (str): Path to the pickled metrics file
-        save_path (str): Path to save the plot image
+    Plot training and validation losses and validation accuracy from a saved pickle file.
+
+    Parameters
+    ----------
+    metrics_file : str, optional
+        Path to the pickled metrics file (default 'training_metrics.pkl').
+    save_path : str, optional
+        Path to save the resulting plot image (default 'training_metrics.png').
+
+    Side Effects
+    ------------
+    - Loads metrics from a pickle file.
+    - Creates plots for training loss, validation loss, and validation accuracy.
+    - Saves the figure to the specified path, creating directories if needed.
+    - Displays the plot with matplotlib.
+    - Prints final metrics summary and debug info.
     """
     # Load metrics data
     try:
@@ -100,13 +117,24 @@ def plot_training_metrics(metrics_file='training_metrics.pkl', save_path='traini
 
 def plot_custom_metrics(train_losses, val_losses, val_accs, save_path='custom_metrics.png'):
     """
-    Plot metrics directly from lists (useful if you want to pass metrics directly)
-    
-    Args:
-        train_losses (list): List of training losses
-        val_losses (list): List of validation losses  
-        val_accs (list): List of validation accuracies
-        save_path (str): Path to save the plot
+    Plot training and validation metrics directly from lists.
+
+    Parameters
+    ----------
+    train_losses : list of float
+        Training losses per epoch.
+    val_losses : list of float
+        Validation losses per epoch.
+    val_accs : list of float
+        Validation accuracies per epoch.
+    save_path : str, optional
+        Path to save the plot (default 'custom_metrics.png').
+
+    Side Effects
+    ------------
+    - Creates a plot of losses and accuracies.
+    - Saves the plot to the specified path.
+    - Displays the plot with matplotlib.
     """
     # Handle potential mismatched lengths
     min_length = min(len(train_losses), len(val_losses), len(val_accs))

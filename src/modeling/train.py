@@ -8,6 +8,27 @@ from src.data_loader import SmokerDataModule
 
 
 def train_model(data_dir="../data", batch_size=32, max_epochs=10, lr=1e-3):
+    """
+    Train a VGG11 model on the Smoker dataset using PyTorch Lightning.
+
+    Parameters
+    ----------
+    data_dir : str, optional
+        Path to the dataset directory (default is "../data").
+    batch_size : int, optional
+        Batch size for training and validation (default is 32).
+    max_epochs : int, optional
+        Maximum number of training epochs (default is 10).
+    lr : float, optional
+        Learning rate for the Adam optimizer (default is 1e-3).
+
+    Side Effects
+    ------------
+    - Saves the best model checkpoint in the "checkpoints" directory.
+    - Saves training metrics (train/validation losses and validation accuracies) 
+      as a pickle file in "reports/data/training_metrics.pkl".
+    - Prints progress and information about training and testing.
+    """
     # --- Check GPU availability ---
     accelerator = "gpu" if torch.cuda.is_available() else "cpu"
     devices = 1 if torch.cuda.is_available() else None
