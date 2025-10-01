@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>src.modeling.model API documentation</title>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>src.modeling.model</code></h1>
+</header>
+<section id="section-intro">
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="src.modeling.model.VGG11"><code class="flex name class">
+<span>class <span class="ident">VGG11</span></span>
+<span>(</span><span>lr=0.001)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class VGG11(pl.LightningModule):
+    &#34;&#34;&#34;
+    PyTorch Lightning module implementing a VGG11-based binary classifier.
+
+    This model uses a pretrained VGG11 backbone with frozen feature layers and 
+    trains a new linear classifier on top for binary classification.
+
+    Parameters
+    ----------
+    lr : float, optional
+        Learning rate for the optimizer (default is 1e-3).
+
+    Attributes
+    ----------
+    feature_extractor : nn.Sequential
+        Pretrained VGG11 feature layers with gradients frozen.
+    classifier : nn.Linear
+        Linear layer for binary classification.
+    loss_fn : nn.CrossEntropyLoss
+        Cross-entropy loss function.
+    lr : float
+        Learning rate.
+    train_losses : list
+        Logged training losses per epoch.
+    val_losses : list
+        Logged validation losses per epoch.
+    val_accs : list
+        Logged validation accuracies per epoch.
+    &#34;&#34;&#34;
+    def __init__(self, lr=1e-3):
+        super().__init__()
+        num_classes = 2
+        # Model - using VGG11. This network is pretrained with the weights from
+        # https://docs.pytorch.org/vision/main/models/generated/torchvision.models.vgg11.html
+        backbone = models.vgg11(weights=&#39;IMAGENET1K_V1&#39;)
+        # Freeze all feature layers, we will only train the final classifier
+        # Extract features (remove classifier head)
+        self.feature_extractor = backbone.features
+        for param in self.feature_extractor.parameters():
+            param.requires_grad = False  # freeze
+
+        # Get number of features from last pooling layer
+        num_filters = backbone.classifier[0].in_features  # = 25088 for VGG11
+
+        # Define classifier for binary classification
+        self.classifier = nn.Linear(num_filters, num_classes)
+
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.lr = lr
+        
+        # Lists to store metrics for plotting
+        self.train_losses = []
+        self.val_losses = []
+        self.val_accs = []
+
+    def forward(self, x):
+        &#34;&#34;&#34;
+        Forward pass through feature extractor and classifier.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor of shape (batch_size, channels, height, width).
+
+        Returns
+        -------
+        torch.Tensor
+            Output logits of shape (batch_size, num_classes).
+        &#34;&#34;&#34;
+        feats = self.feature_extractor(x)
+        feats = torch.flatten(feats, 1)
+        out = self.classifier(feats)
+        return out
+
+    def training_step(self, batch, batch_idx):
+        &#34;&#34;&#34;
+        Training step for a single batch.
+
+        Parameters
+        ----------
+        batch : tuple
+            Tuple of input tensors and labels (xb, yb).
+        batch_idx : int
+            Index of the batch.
+
+        Returns
+        -------
+        torch.Tensor
+            Training loss for this batch.
+        &#34;&#34;&#34;
+        xb, yb = batch
+        out = self(xb)
+        loss = self.loss_fn(out, yb)
+        self.log(&#34;train_loss&#34;, loss, prog_bar=True, on_epoch=True)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        &#34;&#34;&#34;
+        Validation step for a single batch.
+
+        Parameters
+        ----------
+        batch : tuple
+            Tuple of input tensors and labels (xb, yb).
+        batch_idx : int
+            Index of the batch.
+
+        Returns
+        -------
+        dict
+            Dictionary with keys &#39;val_loss&#39; and &#39;val_acc&#39;.
+        &#34;&#34;&#34;
+        xb, yb = batch
+        out = self(xb)
+        loss = self.loss_fn(out, yb)
+        preds = out.argmax(1)
+        acc = (preds == yb).float().mean()
+        
+        # Log both loss and accuracy
+        self.log(&#39;val_loss&#39;, loss, prog_bar=True, on_epoch=True)
+        self.log(&#39;val_acc&#39;, acc, prog_bar=True, on_epoch=True)
+        
+        return {&#34;val_loss&#34;: loss, &#34;val_acc&#34;: acc}
+
+    def on_train_epoch_end(self):
+        &#34;&#34;&#34;Callback at the end of a training epoch to log epoch loss.&#34;&#34;&#34;
+        # Get the logged training loss for this epoch
+        train_loss = self.trainer.callback_metrics.get(&#39;train_loss&#39;)
+        if train_loss is not None:
+            self.train_losses.append(train_loss.item())
+
+    def on_validation_epoch_end(self):
+        &#34;&#34;&#34;Callback at the end of a validation epoch to log metrics.&#34;&#34;&#34;
+        # Get the logged validation metrics for this epoch
+        val_loss = self.trainer.callback_metrics.get(&#39;val_loss&#39;)
+        val_acc = self.trainer.callback_metrics.get(&#39;val_acc&#39;)
+        
+        if val_loss is not None:
+            self.val_losses.append(val_loss.item())
+        if val_acc is not None:
+            self.val_accs.append(val_acc.item())
+
+    def test_step(self, batch, batch_idx):
+        &#34;&#34;&#34;
+        Test step for a single batch.
+
+        Parameters
+        ----------
+        batch : tuple
+            Tuple of input tensors and labels (xb, yb).
+        batch_idx : int
+            Index of the batch.
+        &#34;&#34;&#34;
+        xb, yb = batch
+        out = self(xb)
+        preds = out.argmax(1)
+        acc = (preds == yb).float().mean()
+        self.log(&#39;test_acc&#39;, acc, prog_bar=True, on_epoch=True)
+
+    def configure_optimizers(self):
+        &#34;&#34;&#34;
+        Configure the optimizer.
+
+        Returns
+        -------
+        torch.optim.Optimizer
+            Adam optimizer for the classifier parameters.
+        &#34;&#34;&#34;
+        return optim.Adam(self.classifier.parameters(), lr=self.lr)</code></pre>
+</details>
+<div class="desc"><p>PyTorch Lightning module implementing a VGG11-based binary classifier.</p>
+<p>This model uses a pretrained VGG11 backbone with frozen feature layers and
+trains a new linear classifier on top for binary classification.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>lr</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Learning rate for the optimizer (default is 1e-3).</dd>
+</dl>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>feature_extractor</code></strong> :&ensp;<code>nn.Sequential</code></dt>
+<dd>Pretrained VGG11 feature layers with gradients frozen.</dd>
+<dt><strong><code>classifier</code></strong> :&ensp;<code>nn.Linear</code></dt>
+<dd>Linear layer for binary classification.</dd>
+<dt><strong><code>loss_fn</code></strong> :&ensp;<code>nn.CrossEntropyLoss</code></dt>
+<dd>Cross-entropy loss function.</dd>
+<dt><strong><code>lr</code></strong> :&ensp;<code>float</code></dt>
+<dd>Learning rate.</dd>
+<dt><strong><code>train_losses</code></strong> :&ensp;<code>list</code></dt>
+<dd>Logged training losses per epoch.</dd>
+<dt><strong><code>val_losses</code></strong> :&ensp;<code>list</code></dt>
+<dd>Logged validation losses per epoch.</dd>
+<dt><strong><code>val_accs</code></strong> :&ensp;<code>list</code></dt>
+<dd>Logged validation accuracies per epoch.</dd>
+</dl></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>pytorch_lightning.core.module.LightningModule</li>
+<li>lightning_fabric.utilities.device_dtype_mixin._DeviceDtypeModuleMixin</li>
+<li>pytorch_lightning.core.mixins.hparams_mixin.HyperparametersMixin</li>
+<li>pytorch_lightning.core.hooks.ModelHooks</li>
+<li>pytorch_lightning.core.hooks.DataHooks</li>
+<li>pytorch_lightning.core.hooks.CheckpointHooks</li>
+<li>torch.nn.modules.module.Module</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="src.modeling.model.VGG11.configure_optimizers"><code class="name flex">
+<span>def <span class="ident">configure_optimizers</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def configure_optimizers(self):
+    &#34;&#34;&#34;
+    Configure the optimizer.
+
+    Returns
+    -------
+    torch.optim.Optimizer
+        Adam optimizer for the classifier parameters.
+    &#34;&#34;&#34;
+    return optim.Adam(self.classifier.parameters(), lr=self.lr)</code></pre>
+</details>
+<div class="desc"><p>Configure the optimizer.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>torch.optim.Optimizer</code></dt>
+<dd>Adam optimizer for the classifier parameters.</dd>
+</dl></div>
+</dd>
+<dt id="src.modeling.model.VGG11.forward"><code class="name flex">
+<span>def <span class="ident">forward</span></span>(<span>self, x) ‑> Callable[..., Any]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def forward(self, x):
+    &#34;&#34;&#34;
+    Forward pass through feature extractor and classifier.
+
+    Parameters
+    ----------
+    x : torch.Tensor
+        Input tensor of shape (batch_size, channels, height, width).
+
+    Returns
+    -------
+    torch.Tensor
+        Output logits of shape (batch_size, num_classes).
+    &#34;&#34;&#34;
+    feats = self.feature_extractor(x)
+    feats = torch.flatten(feats, 1)
+    out = self.classifier(feats)
+    return out</code></pre>
+</details>
+<div class="desc"><p>Forward pass through feature extractor and classifier.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>x</code></strong> :&ensp;<code>torch.Tensor</code></dt>
+<dd>Input tensor of shape (batch_size, channels, height, width).</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>torch.Tensor</code></dt>
+<dd>Output logits of shape (batch_size, num_classes).</dd>
+</dl></div>
+</dd>
+<dt id="src.modeling.model.VGG11.on_train_epoch_end"><code class="name flex">
+<span>def <span class="ident">on_train_epoch_end</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def on_train_epoch_end(self):
+    &#34;&#34;&#34;Callback at the end of a training epoch to log epoch loss.&#34;&#34;&#34;
+    # Get the logged training loss for this epoch
+    train_loss = self.trainer.callback_metrics.get(&#39;train_loss&#39;)
+    if train_loss is not None:
+        self.train_losses.append(train_loss.item())</code></pre>
+</details>
+<div class="desc"><p>Callback at the end of a training epoch to log epoch loss.</p></div>
+</dd>
+<dt id="src.modeling.model.VGG11.on_validation_epoch_end"><code class="name flex">
+<span>def <span class="ident">on_validation_epoch_end</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def on_validation_epoch_end(self):
+    &#34;&#34;&#34;Callback at the end of a validation epoch to log metrics.&#34;&#34;&#34;
+    # Get the logged validation metrics for this epoch
+    val_loss = self.trainer.callback_metrics.get(&#39;val_loss&#39;)
+    val_acc = self.trainer.callback_metrics.get(&#39;val_acc&#39;)
+    
+    if val_loss is not None:
+        self.val_losses.append(val_loss.item())
+    if val_acc is not None:
+        self.val_accs.append(val_acc.item())</code></pre>
+</details>
+<div class="desc"><p>Callback at the end of a validation epoch to log metrics.</p></div>
+</dd>
+<dt id="src.modeling.model.VGG11.test_step"><code class="name flex">
+<span>def <span class="ident">test_step</span></span>(<span>self, batch, batch_idx)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def test_step(self, batch, batch_idx):
+    &#34;&#34;&#34;
+    Test step for a single batch.
+
+    Parameters
+    ----------
+    batch : tuple
+        Tuple of input tensors and labels (xb, yb).
+    batch_idx : int
+        Index of the batch.
+    &#34;&#34;&#34;
+    xb, yb = batch
+    out = self(xb)
+    preds = out.argmax(1)
+    acc = (preds == yb).float().mean()
+    self.log(&#39;test_acc&#39;, acc, prog_bar=True, on_epoch=True)</code></pre>
+</details>
+<div class="desc"><p>Test step for a single batch.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>batch</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>Tuple of input tensors and labels (xb, yb).</dd>
+<dt><strong><code>batch_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>Index of the batch.</dd>
+</dl></div>
+</dd>
+<dt id="src.modeling.model.VGG11.training_step"><code class="name flex">
+<span>def <span class="ident">training_step</span></span>(<span>self, batch, batch_idx)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def training_step(self, batch, batch_idx):
+    &#34;&#34;&#34;
+    Training step for a single batch.
+
+    Parameters
+    ----------
+    batch : tuple
+        Tuple of input tensors and labels (xb, yb).
+    batch_idx : int
+        Index of the batch.
+
+    Returns
+    -------
+    torch.Tensor
+        Training loss for this batch.
+    &#34;&#34;&#34;
+    xb, yb = batch
+    out = self(xb)
+    loss = self.loss_fn(out, yb)
+    self.log(&#34;train_loss&#34;, loss, prog_bar=True, on_epoch=True)
+    return loss</code></pre>
+</details>
+<div class="desc"><p>Training step for a single batch.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>batch</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>Tuple of input tensors and labels (xb, yb).</dd>
+<dt><strong><code>batch_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>Index of the batch.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>torch.Tensor</code></dt>
+<dd>Training loss for this batch.</dd>
+</dl></div>
+</dd>
+<dt id="src.modeling.model.VGG11.validation_step"><code class="name flex">
+<span>def <span class="ident">validation_step</span></span>(<span>self, batch, batch_idx)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def validation_step(self, batch, batch_idx):
+    &#34;&#34;&#34;
+    Validation step for a single batch.
+
+    Parameters
+    ----------
+    batch : tuple
+        Tuple of input tensors and labels (xb, yb).
+    batch_idx : int
+        Index of the batch.
+
+    Returns
+    -------
+    dict
+        Dictionary with keys &#39;val_loss&#39; and &#39;val_acc&#39;.
+    &#34;&#34;&#34;
+    xb, yb = batch
+    out = self(xb)
+    loss = self.loss_fn(out, yb)
+    preds = out.argmax(1)
+    acc = (preds == yb).float().mean()
+    
+    # Log both loss and accuracy
+    self.log(&#39;val_loss&#39;, loss, prog_bar=True, on_epoch=True)
+    self.log(&#39;val_acc&#39;, acc, prog_bar=True, on_epoch=True)
+    
+    return {&#34;val_loss&#34;: loss, &#34;val_acc&#34;: acc}</code></pre>
+</details>
+<div class="desc"><p>Validation step for a single batch.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>batch</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>Tuple of input tensors and labels (xb, yb).</dd>
+<dt><strong><code>batch_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>Index of the batch.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>dict</code></dt>
+<dd>Dictionary with keys 'val_loss' and 'val_acc'.</dd>
+</dl></div>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="src.modeling" href="index.html">src.modeling</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="src.modeling.model.VGG11" href="#src.modeling.model.VGG11">VGG11</a></code></h4>
+<ul class="">
+<li><code><a title="src.modeling.model.VGG11.configure_optimizers" href="#src.modeling.model.VGG11.configure_optimizers">configure_optimizers</a></code></li>
+<li><code><a title="src.modeling.model.VGG11.forward" href="#src.modeling.model.VGG11.forward">forward</a></code></li>
+<li><code><a title="src.modeling.model.VGG11.on_train_epoch_end" href="#src.modeling.model.VGG11.on_train_epoch_end">on_train_epoch_end</a></code></li>
+<li><code><a title="src.modeling.model.VGG11.on_validation_epoch_end" href="#src.modeling.model.VGG11.on_validation_epoch_end">on_validation_epoch_end</a></code></li>
+<li><code><a title="src.modeling.model.VGG11.test_step" href="#src.modeling.model.VGG11.test_step">test_step</a></code></li>
+<li><code><a title="src.modeling.model.VGG11.training_step" href="#src.modeling.model.VGG11.training_step">training_step</a></code></li>
+<li><code><a title="src.modeling.model.VGG11.validation_step" href="#src.modeling.model.VGG11.validation_step">validation_step</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>
