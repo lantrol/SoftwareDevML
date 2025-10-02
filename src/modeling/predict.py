@@ -53,7 +53,7 @@ def predict(model, dataloader, device="cpu"):
 
 
 if __name__ == "__main__":
-    checkpoint = "checkpoints/vgg11-smoker-epoch=02-val_acc=0.90.ckpt"
+    checkpoint = "checkpoints/vgg11-smoker-epoch=02-val_acc=0.88.ckpt"
     dataloader = SmokerDataModule()
     model = load_model(checkpoint)
     #print("Model loaded for inference!")
