@@ -11,8 +11,8 @@ requires-python = ">=3.11,<3.12"
 license = {text = "MIT"}
 
 dependencies = [
-    "torch==2.8.0+cpu",
-    "torchvision==0.23.0+cpu",
+    "torch>=2.7.1",
+    "torchvision>=0.22.1",
     "pytorch_lightning==2.5.5",
     "matplotlib==3.10.6",
     "requests==2.32.5",
