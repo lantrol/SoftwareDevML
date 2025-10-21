@@ -132,25 +132,61 @@ with gr.Blocks() as demo:
                 gr.Markdown("### ❌ No Smoking")
                 no_smoking_gallery = gr.Gallery(label="No Smoking Samples", columns=3, height="auto")
     
-    # Connect inputs to function
-    split_selector.change(fn=get_sample_images, inputs=[split_selector, num_samples_slider],
-                          outputs=[smoking_gallery, no_smoking_gallery])
-    num_samples_slider.change(fn=get_sample_images, inputs=[split_selector, num_samples_slider],
-                              outputs=[smoking_gallery, no_smoking_gallery])
-
+        # Connect inputs to function
+        split_selector.change(fn=get_sample_images, inputs=[split_selector, num_samples_slider],
+                            outputs=[smoking_gallery, no_smoking_gallery])
+        num_samples_slider.change(fn=get_sample_images, inputs=[split_selector, num_samples_slider],
+                                outputs=[smoking_gallery, no_smoking_gallery])
+    
+    # ------------------- Data Analysis Tab -------------------
     with gr.Tab("Data Analysis"):
-        gr.Markdown("Click the button to generate all plots")
+        gr.Markdown("### 📊 Data Analysis")
+        """
+        
+        with gr.Row():
+            with gr.Column():
+                output1 = gr.Plot(label="Genre Distribution by Split")
+            with gr.Column():
+                output2 = gr.Plot(label="Class Distribution by Split")
+            with gr.Column():
+                output3 = gr.Plot(label="Genre Distribution by Category & Label")
+        
+        """
+
+
         generate_btn = gr.Button("Generate Plots")
-        output1 = gr.Plot()
-        output2 = gr.Plot()
-        output3 = gr.Plot()
+
+        # Arrange plots in columns
+        with gr.Row():
+            with gr.Column():
+                output1 = gr.Plot(label="Genre Distribution by Split")
+            with gr.Column():
+                output2 = gr.Plot(label="Class Distribution by Split")
+            with gr.Column():
+                output3 = gr.Plot(label="Genre Distribution by Category & Label")
+
+        # Connect the button to the function
         generate_btn.click(
-            generate_plots,
+            fn=generate_plots,
             inputs=[],
             outputs=[output1, output2, output3]
         )
 
-    #demo.load()
+    # ------------------- Auto Load on App Start -------------------
+    demo.load(
+        fn=get_sample_images,
+        inputs=[split_selector, num_samples_slider],
+        outputs=[smoking_gallery, no_smoking_gallery],
+        queue=False
+    )
+
+    demo.load(
+        fn=generate_plots,
+        inputs=[],
+        outputs=[output1, output2, output3],
+        queue=False
+    )
+
         
 
 if __name__ == "__main__":
