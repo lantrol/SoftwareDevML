@@ -9,7 +9,7 @@ import plotly.express as px
 import torch
 
 from src.data_loader import SmokerDataModule  
-from src.plots.calibration import simple_calibration_plot_gradio, show_high_loss_samples_gradio
+from src.plots.calibration import simple_calibration_plot, show_high_loss_samples
 from src.modeling.model import VGG11
 
 
@@ -159,12 +159,12 @@ model.to(device)
 
 # --- Function to update calibration plot ---
 def calibration_plot_gradio(n_bins):
-    fig, brier = simple_calibration_plot_gradio(model, dm.val_dataloader(), device=device, n_bins=n_bins)
+    fig, brier = simple_calibration_plot(model, dm.val_dataloader(), device=device, n_bins=n_bins, gradio=True)
     return f"{brier:.4f}", fig
 
 # --- Optional: function to get high-loss samples ---
 def high_loss_samples_gradio(top_k):
-    fig = show_high_loss_samples_gradio(model, dm.val_dataloader(), device=device, top_k=top_k)
+    fig = show_high_loss_samples(model, dm.val_dataloader(), device=device, top_k=top_k, gradio=True)
     return fig
 
 
@@ -286,7 +286,7 @@ with gr.Blocks() as demo:
         )
 
         top_k_slider.change(
-            fn=show_high_loss_samples_gradio,
+            fn=lambda k: calibration_plot_gradio(k),
             inputs=[top_k_slider],
             outputs=[high_loss_output],
         )
