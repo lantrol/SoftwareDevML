@@ -3,8 +3,7 @@ from pathlib import Path
 from PIL import Image
 import random
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
+import numpy as np
 import os
 import plotly.express as px   # ✅ use Plotly instead of seaborn/matplotlib
 from src.data_loader import SmokerDataModule  # replace with your actual import
@@ -100,6 +99,52 @@ def generate_plots():
 
     return fig1, fig2, fig3a, fig3b  # return 4th as a list for flexible layout
 
+def compute_mean_images_from_dataset(dataset, class_names, n_samples=50, img_size=(250, 250)):
+    imgs_by_class = {cls: [] for cls in class_names}
+
+    # Randomly sample subset of dataset
+    sample_indices = random.sample(range(len(dataset.samples)), min(len(dataset.samples), n_samples))
+    for idx in sample_indices:
+        path, class_idx = dataset.samples[idx]
+        try:
+            img = Image.open(path).convert("RGB").resize(img_size)
+            img = np.array(img, dtype=np.float32) / 255.0
+            imgs_by_class[class_names[class_idx]].append(img)
+        except Exception as e:
+            print(f"Skipping {path}: {e}")
+
+    mean_images = {}
+    for cls, imgs in imgs_by_class.items():
+        if imgs:
+            mean_img = np.mean(imgs, axis=0)
+            mean_img = (mean_img * 255).astype(np.uint8)
+            mean_images[cls] = Image.fromarray(mean_img)
+    
+    return mean_images
+
+def generate_mean_images(n_train, n_val, n_test):
+    class_names = ["smoking", "no_smoking"]
+
+    # Load datasets
+    dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4)
+    dm.setup()
+    train_dataset = dm.train_dataset
+    val_dataset = dm.val_dataset
+    test_dataset = dm.test_dataset
+
+    # Compute mean images
+    mean_train = compute_mean_images_from_dataset(train_dataset, class_names, n_samples=n_train)
+    mean_val = compute_mean_images_from_dataset(val_dataset, class_names, n_samples=n_val)
+    mean_test = compute_mean_images_from_dataset(test_dataset, class_names, n_samples=n_test)
+
+    # Return PIL images (Gradio will show them directly)
+    return (
+        mean_train["smoking"], mean_train["no_smoking"],
+        mean_val["smoking"], mean_val["no_smoking"],
+        mean_test["smoking"], mean_test["no_smoking"]
+    )
+
+
 # Gradio interface
 with gr.Blocks() as demo:
 
@@ -151,6 +196,46 @@ with gr.Blocks() as demo:
             outputs=[output1, output2, output3a, output3b],
         )
 
+    # ------------------- Mean Image Tab -------------------
+    with gr.Tab("Mean Image"):
+        gr.Markdown("### 🧮 Mean Images per Class & Split")
+        gr.Markdown("Use the sliders to control how many images are averaged for each dataset split.")
+
+        # Sliders
+        with gr.Row():
+            n_train_slider = gr.Slider(10, 200, value=50, step=10, label="Train Samples for Mean")
+            n_val_slider = gr.Slider(10, 200, value=50, step=10, label="Val Samples for Mean")
+            n_test_slider = gr.Slider(10, 200, value=50, step=10, label="Test Samples for Mean")
+
+        # Image rows
+        with gr.Row():
+            with gr.Column():
+                gr.Markdown("#### Train Mean Images")
+                train_smoking_img = gr.Image(label="Smoking (Train)")
+                train_no_smoking_img = gr.Image(label="No Smoking (Train)")
+            with gr.Column():
+                gr.Markdown("#### Val Mean Images")
+                val_smoking_img = gr.Image(label="Smoking (Val)")
+                val_no_smoking_img = gr.Image(label="No Smoking (Val)")
+            with gr.Column():
+                gr.Markdown("#### Test Mean Images")
+                test_smoking_img = gr.Image(label="Smoking (Test)")
+                test_no_smoking_img = gr.Image(label="No Smoking (Test)")
+
+        # Button
+        compute_btn = gr.Button("Compute Mean Images")
+
+        # Connect function
+        compute_btn.click(
+            fn=generate_mean_images,
+            inputs=[n_train_slider, n_val_slider, n_test_slider],
+            outputs=[
+                train_smoking_img, train_no_smoking_img,
+                val_smoking_img, val_no_smoking_img,
+                test_smoking_img, test_no_smoking_img
+            ]
+        )
+
     # ------------------- Auto Load on App Start -------------------
     demo.load(
         fn=get_sample_images,
@@ -165,6 +250,17 @@ with gr.Blocks() as demo:
         outputs=[output1, output2, output3a, output3b],
         queue=False
     )
+
+    demo.load(
+    fn=generate_mean_images,
+    inputs=[n_train_slider, n_val_slider, n_test_slider],
+    outputs=[
+        train_smoking_img, train_no_smoking_img,
+        val_smoking_img, val_no_smoking_img,
+        test_smoking_img, test_no_smoking_img
+    ],
+    queue=False
+)
 
         
 
