@@ -2,3 +2,7 @@ checkpoints/
 .vscode/
 __pycache__/
 lightning_logs/
+data/raw
+data/test
+data/train
+data/val

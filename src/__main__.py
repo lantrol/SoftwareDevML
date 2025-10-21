@@ -1,287 +1,326 @@
-# ML dashboard - Streamlit Demo
-# launch with `uv run streamlit run unit6b_streamlit_extra.py`
-
-import streamlit as st
+import gradio as gr
+from pathlib import Path
+from PIL import Image
+import random
+import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.datasets import load_iris, make_classification
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import os
+import plotly.express as px   
+import torch
 
-# Page configuration
-st.set_page_config(
-    page_title="ML Model Dashboard",
-    page_icon="🤖",
-    layout="wide"
-)
+from src.data_loader import SmokerDataModule  
+from src.plots.calibration import simple_calibration_plot, show_high_loss_samples
+from src.modeling.model import VGG11
 
-# Title
-st.markdown("<h2 style='text-align: center; color: #2e86ab;'>🤖 Interactive ML Model Dashboard</h2>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-style: italic;'>Compare different models and visualize their performance in real-time</p>", unsafe_allow_html=True)
 
-# Load data
-iris = load_iris()
-X, y = iris.data, iris.target
-feature_names = iris.feature_names
-target_names = iris.target_names
+# Base paths
+BASE_DIR = Path(__file__).resolve().parent.parent  # one level up from /src
+DATASET_DIR = BASE_DIR / "data"
+DATA_DIR = BASE_DIR / "data" #MODIFY
+CHECKPOINTS_DIR = BASE_DIR / "checkpoints"
 
-# Create tabs for configuration
-tab1, tab2, tab3 = st.tabs(["Data", "Model", "Visualization"])
-
-# === DATA TAB ===
-with tab1:
-    st.markdown("#### Dataset Configuration")
+# Function to load sample images per class
+def get_sample_images(split="train", n_samples=5):
+    split_path = DATASET_DIR / split
+    classes = ["smoking", "no_smoking"]
+    images_dict = {}
     
-    col1, col2, col3 = st.columns(3)
+    for cls in classes:
+        cls_path = split_path / cls
+        images = list(cls_path.glob("*"))
+        sampled = random.sample(images, min(len(images), n_samples))
+        pil_images = [Image.open(img).convert("RGB") for img in sampled]
+        images_dict[cls] = pil_images
     
-    with col1:
-        dataset_selector = st.selectbox(
-            "Dataset",
-            options=['Iris Dataset', 'Synthetic Data'],
-            index=0
-        )
-    
-    with col2:
-        test_size_slider = st.slider(
-            "Test Size",
-            min_value=0.1,
-            max_value=0.5,
-            value=0.3,
-            step=0.05
-        )
-    
-    with col3:
-        random_state = st.number_input(
-            "Random Seed",
-            min_value=0,
-            value=42,
-            step=1
-        )
+    return images_dict["smoking"], images_dict["no_smoking"]
 
-# === MODEL TAB ===
-with tab2:
-    st.markdown("#### Model Configuration")
-    
-    model_selector = st.selectbox(
-        "Model",
-        options=['Random Forest', 'Logistic Regression', 'SVM'],
-        index=0
+# ---- Helper functions ----
+def dataset_to_df(dataset, split_name):
+    samples = []
+    for path, _ in dataset.samples:
+        fname = os.path.basename(path)
+        samples.append({"name": fname, "split": split_name})
+    return pd.DataFrame(samples)
+
+def generate_plots():
+    # Load metadata
+    categories = pd.read_csv(DATA_DIR / "categories.csv")   # name, category
+    genres = pd.read_csv(DATA_DIR / "genres.csv")           # filename, classification
+    df_classes = pd.read_csv(DATA_DIR / "class.csv")
+    df_genre = pd.read_csv(DATA_DIR / "genres.csv")
+
+    # Fix column naming
+    genres = genres.rename(columns={"filename": "name"})
+    df_classification = pd.merge(categories, genres, on="name", how="inner")
+
+    # Rename first, *then* select
+    df_classification = df_classification.rename(columns={
+        "classification": "genre",
+        "category": "class"
+    })
+    df_classification = df_classification[["name", "genre", "class"]]
+
+    # Load data module
+    dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4)
+    dm.setup()
+
+    # Get split info
+    df_train = dataset_to_df(dm.train_dataset, "train")
+    df_val   = dataset_to_df(dm.val_dataset, "val")
+    df_test  = dataset_to_df(dm.test_dataset, "test")
+    df_splits = pd.concat([df_train, df_val, df_test], ignore_index=True)
+
+    # Merge with metadata
+    df = pd.merge(df_classification, df_splits, on="name", how="inner")
+
+    # ---- Plot 1: Genre Distribution by Split ----
+    fig1 = px.histogram(
+        df, x="split", color="genre",
+        title="Genre Distribution by Split",
+        barmode="group"
     )
-    
-    st.markdown("---")
-    
-    # Show parameters based on selected model
-    if model_selector == 'Random Forest':
-        st.markdown("**Random Forest Parameters**")
-        col1, col2 = st.columns(2)
-        with col1:
-            rf_n_estimators = st.slider(
-                "N Estimators",
-                min_value=10,
-                max_value=300,
-                value=100,
-                step=10
-            )
-        with col2:
-            rf_max_depth = st.slider(
-                "Max Depth",
-                min_value=1,
-                max_value=15,
-                value=5,
-                step=1
-            )
-    
-    elif model_selector == 'Logistic Regression':
-        st.markdown("**Logistic Regression Parameters**")
-        lr_C = st.slider(
-            "C Parameter",
-            min_value=0.001,
-            max_value=1000.0,
-            value=1.0,
-            step=0.001,
-            format="%.3f"
-        )
-    
-    else:  # SVM
-        st.markdown("**SVM Parameters**")
-        col1, col2 = st.columns(2)
-        with col1:
-            svm_C = st.slider(
-                "C Parameter",
-                min_value=0.001,
-                max_value=1000.0,
-                value=1.0,
-                step=0.001,
-                format="%.3f"
-            )
-        with col2:
-            svm_kernel = st.selectbox(
-                "Kernel",
-                options=['rbf', 'linear', 'poly'],
-                index=0
-            )
 
-# === VISUALIZATION TAB ===
-with tab3:
-    st.markdown("#### Visualization Settings")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        feature_x = st.selectbox(
-            "X Feature",
-            options=feature_names,
-            index=0
-        )
-    
-    with col2:
-        feature_y = st.selectbox(
-            "Y Feature",
-            options=feature_names,
-            index=1
-        )
-    
-    with col3:
-        show_decision_boundary = st.checkbox(
-            "Show Decision Boundary",
-            value=True
-        )
-
-# === MAIN TRAINING AND VISUALIZATION ===
-st.markdown("---")
-
-# Status placeholder
-status_placeholder = st.empty()
-status_placeholder.info("**Status:** Ready to train model")
-
-try:
-    status_placeholder.warning("**Status:** Preparing data...")
-    
-    # Prepare data
-    if dataset_selector == 'Iris Dataset':
-        X_data, y_data = X, y
-    else:
-        X_data, y_data = make_classification(
-            n_samples=300, n_features=4, n_classes=3,
-            n_informative=4, n_redundant=0,
-            random_state=random_state
-        )
-    
-    # Select features for visualization
-    X_selected = X_data[:, [feature_names.index(feature_x), 
-                            feature_names.index(feature_y)]]
-    
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_selected, y_data,
-        test_size=test_size_slider,
-        random_state=random_state
+    # ---- Plot 2: Class Distribution by Split ----
+    fig2 = px.histogram(
+        df, x="split", color="class",
+        title="Class Distribution by Split",
+        barmode="group"
     )
-    
-    # Configure model
-    if model_selector == 'Random Forest':
-        model = RandomForestClassifier(
-            n_estimators=rf_n_estimators,
-            max_depth=rf_max_depth,
-            random_state=random_state
-        )
-    elif model_selector == 'Logistic Regression':
-        model = LogisticRegression(
-            C=lr_C,
-            random_state=random_state,
-            max_iter=1000
-        )
-    else:  # SVM
-        model = SVC(
-            C=svm_C,
-            kernel=svm_kernel,
-            random_state=random_state
-        )
-    
-    status_placeholder.warning("**Status:** Training model...")
-    
-    # Train model
-    model.fit(X_train, y_train)
-    
-    status_placeholder.warning("**Status:** Model evaluation...")
-    
-    # Make predictions
-    y_pred = model.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    
-    status_placeholder.success("**Status:** Training completed successfully!")
-    
-    # Create result tabs
-    results_tab1, results_tab2 = st.tabs(["Visualizations", "Metrics"])
-    
-    # === VISUALIZATIONS TAB ===
-    with results_tab1:
-        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-        
-        # Plot 1: Data distribution
-        scatter = axes[0].scatter(
-            X_selected[:, 0], X_selected[:, 1],
-            c=y_data, cmap='viridis', alpha=0.7, s=50
-        )
-        axes[0].set_xlabel(feature_x)
-        axes[0].set_ylabel(feature_y)
-        axes[0].set_title('Full Dataset Distribution')
-        axes[0].grid(True, alpha=0.3)
-        
-        # Plot 2: Decision boundary
-        if show_decision_boundary:
-            h = 0.02
-            x_min, x_max = X_selected[:, 0].min() - 0.5, X_selected[:, 0].max() + 0.5
-            y_min, y_max = X_selected[:, 1].min() - 0.5, X_selected[:, 1].max() + 0.5
-            xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                               np.arange(y_min, y_max, h))
-            
-            Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
-            Z = Z.reshape(xx.shape)
-            
-            axes[1].contourf(xx, yy, Z, alpha=0.3, cmap='viridis')
-        
-        # Scatter test points
-        axes[1].scatter(
-            X_test[:, 0], X_test[:, 1],
-            c=y_test, cmap='viridis',
-            edgecolors='black', s=50, alpha=0.8
-        )
-        axes[1].set_xlabel(feature_x)
-        axes[1].set_ylabel(feature_y)
-        axes[1].set_title(f'Test Set & Decision Boundary\n(Accuracy: {accuracy:.3f})')
-        axes[1].grid(True, alpha=0.3)
-        
-        # Plot 3: Confusion matrix
-        cm = confusion_matrix(y_test, y_pred)
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=axes[2])
-        axes[2].set_title('Confusion Matrix')
-        axes[2].set_xlabel('Predicted')
-        axes[2].set_ylabel('Actual')
-        
-        plt.tight_layout()
-        st.pyplot(fig)
-    
-    # === METRICS TAB ===
-    with results_tab2:
-        st.markdown(f"**Model:** {model_selector}")
-        st.markdown(f"**Dataset:** {dataset_selector}")
-        st.markdown(f"**Features:** {feature_x} vs {feature_y}")
-        st.markdown(f"**Test Accuracy:** {accuracy:.3f}")
-        st.markdown(f"**Training Size:** {len(X_train)} samples")
-        st.markdown(f"**Test Size:** {len(X_test)} samples")
-        
-        st.markdown("### Classification Report")
-        if dataset_selector == 'Iris Dataset':
-            report = classification_report(y_test, y_pred, target_names=target_names)
-        else:
-            report = classification_report(y_test, y_pred)
-        
-        st.text(report)
 
-except Exception as e:
-    status_placeholder.error(f"**Status:** Error: {str(e)}")
+    # ---- Plot 3: Genre Distribution by Category and Label ----
+    df_classes["label"] = df_classes["label"].replace({0: "No Smoking", 1:"Smoking"})
+    df_cls_genre = pd.merge(df_genre, df_classes, on="name", how="inner")
+
+    # Create a subplot-like layout
+    fig3a = px.histogram(
+        df, x="class", color="genre",
+        title="Genre Distribution By Category",
+        barmode="group"
+    )
+    fig3b = px.histogram(
+        df_cls_genre, x="label", color="genre",
+        title="Genre Distribution By Label",
+        barmode="group"
+    )
+
+    return fig1, fig2, fig3a, fig3b  
+
+def compute_mean_images_from_dataset(dataset, class_names, n_samples=50, img_size=(250, 250)):
+    imgs_by_class = {cls: [] for cls in class_names}
+
+    # Randomly sample subset of dataset
+    sample_indices = random.sample(range(len(dataset.samples)), min(len(dataset.samples), n_samples))
+    for idx in sample_indices:
+        path, class_idx = dataset.samples[idx]
+        try:
+            img = Image.open(path).convert("RGB").resize(img_size)
+            img = np.array(img, dtype=np.float32) / 255.0
+            imgs_by_class[class_names[class_idx]].append(img)
+        except Exception as e:
+            print(f"Skipping {path}: {e}")
+
+    mean_images = {}
+    for cls, imgs in imgs_by_class.items():
+        if imgs:
+            mean_img = np.mean(imgs, axis=0)
+            mean_img = (mean_img * 255).astype(np.uint8)
+            mean_images[cls] = Image.fromarray(mean_img)
+    
+    return mean_images
+
+def generate_mean_train(n_train):
+    class_names = ["smoking", "no_smoking"]
+    dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4)
+    dm.setup()
+    mean_train = compute_mean_images_from_dataset(dm.train_dataset, class_names, n_samples=n_train)
+    return mean_train["smoking"], mean_train["no_smoking"]
+
+def generate_mean_val(n_val):
+    class_names = ["smoking", "no_smoking"]
+    dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4)
+    dm.setup()
+    mean_val = compute_mean_images_from_dataset(dm.val_dataset, class_names, n_samples=n_val)
+    return mean_val["smoking"], mean_val["no_smoking"]
+
+def generate_mean_test(n_test):
+    class_names = ["smoking", "no_smoking"]
+    dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4)
+    dm.setup()
+    mean_test = compute_mean_images_from_dataset(dm.test_dataset, class_names, n_samples=n_test)
+    return mean_test["smoking"], mean_test["no_smoking"]
+
+# ------------------------ MODEL CALIBRATION ------------------------------------------
+# --- Load model and data ---
+device = "cuda" if torch.cuda.is_available() else "cpu"
+dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4)
+dm.setup()
+model = VGG11.load_from_checkpoint(CHECKPOINTS_DIR / "vgg11-smoker-epoch=02-val_acc=0.88.ckpt")
+model.to(device)
+
+# --- Function to update calibration plot ---
+def calibration_plot_gradio(n_bins):
+    fig, brier = simple_calibration_plot(model, dm.val_dataloader(), device=device, n_bins=n_bins, gradio=True)
+    return f"{brier:.4f}", fig
+
+# ------------------ GRADIO INTERFACE ---------------------------------
+with gr.Blocks() as demo:
+
+    gr.Markdown("# 🖼️ Smoking Dataset Explorer")
+    
+    with gr.Tab("Data Exploration"):
+        split_selector = gr.Dropdown(
+            choices=["train", "val", "test"],
+            value="train",
+            label="Select Dataset Split"
+        )
+        num_samples_slider = gr.Slider(
+            minimum=3, maximum=10, value=5, step=1, label="Images per Class"
+        )
+        
+        # Two main columns for smoking / no_smoking
+        with gr.Row():
+            with gr.Column():
+                gr.Markdown("### 🚬 Smoking")
+                # Show 2 images per row for smaller thumbnails
+                smoking_gallery = gr.Gallery(label="Smoking Samples", columns=3, height="auto")
+            with gr.Column():
+                gr.Markdown("### ❌ No Smoking")
+                no_smoking_gallery = gr.Gallery(label="No Smoking Samples", columns=3, height="auto")
+    
+        # Connect inputs to function
+        split_selector.change(fn=get_sample_images, inputs=[split_selector, num_samples_slider],
+                            outputs=[smoking_gallery, no_smoking_gallery])
+        num_samples_slider.change(fn=get_sample_images, inputs=[split_selector, num_samples_slider],
+                                outputs=[smoking_gallery, no_smoking_gallery])
+    
+    # ------------------- Data Analysis Tab -------------------
+    with gr.Tab("Data Analysis"):
+        gr.Markdown("### 📊 Data Analysis")
+        generate_btn = gr.Button("Generate Plots")
+
+        with gr.Row():
+            output1 = gr.Plot(label="Genre Distribution by Split")
+            output2 = gr.Plot(label="Class Distribution by Split")
+
+        with gr.Row():
+            output3a = gr.Plot(label="Genre Distribution by Category")
+            output3b = gr.Plot(label="Genre Distribution by Label")
+
+        # Connect the button to the function
+        generate_btn.click(
+            fn=generate_plots,
+            inputs=[],
+            outputs=[output1, output2, output3a, output3b],
+        )
+
+    # ------------------- Mean Image Tab -------------------
+    with gr.Tab("Mean Image"):
+        gr.Markdown("### 🧮 Mean Images per Class & Split")
+        gr.Markdown("Use the sliders to control how many images are averaged for each dataset split.")
+
+        # Sliders
+        with gr.Row():
+            n_train_slider = gr.Slider(10, 200, value=50, step=10, label="Train Samples for Mean")
+            n_val_slider = gr.Slider(10, 200, value=50, step=10, label="Val Samples for Mean")
+            n_test_slider = gr.Slider(10, 200, value=50, step=10, label="Test Samples for Mean")
+
+        # Image rows
+        with gr.Row():
+            with gr.Column():
+                gr.Markdown("#### Train Mean Images")
+                train_smoking_img = gr.Image(label="Smoking (Train)")
+                train_no_smoking_img = gr.Image(label="No Smoking (Train)")
+            with gr.Column():
+                gr.Markdown("#### Val Mean Images")
+                val_smoking_img = gr.Image(label="Smoking (Val)")
+                val_no_smoking_img = gr.Image(label="No Smoking (Val)")
+            with gr.Column():
+                gr.Markdown("#### Test Mean Images")
+                test_smoking_img = gr.Image(label="Smoking (Test)")
+                test_no_smoking_img = gr.Image(label="No Smoking (Test)")
+
+        n_train_slider.change(
+            fn=generate_mean_train,
+            inputs=[n_train_slider],
+            outputs=[train_smoking_img, train_no_smoking_img]
+        )
+
+        n_val_slider.change(
+            fn=generate_mean_val,
+            inputs=[n_val_slider],
+            outputs=[val_smoking_img, val_no_smoking_img]
+        )
+
+        n_test_slider.change(
+            fn=generate_mean_test,
+            inputs=[n_test_slider],
+            outputs=[test_smoking_img, test_no_smoking_img]
+        )
+    # ------------------- Calibration Model Tab -------------------
+    with gr.Tab("Calibration Model"):
+        gr.Markdown("### 🔧 Model Calibration")
+        
+        # Row 1: Calibration plot slider
+        with gr.Row():
+            n_bins_slider = gr.Slider(5, 50, value=10, step=1, label="Calibration bins")
+            top_k_slider = gr.Slider(1, 10, value=5, step=1, label="Top Loss Samples")
+
+        with gr.Row():
+            calibration_plot_output = gr.Plot(label="Calibration Plot")
+            high_loss_gallery = gr.Gallery(label="Top High-Loss Samples", columns=3, height="auto")
+
+        with gr.Row():
+            brier_output = gr.Textbox(label="Brier Score")
+
+        # --- Real-time plot updates ---
+        n_bins_slider.change(
+            fn=lambda n: calibration_plot_gradio(n),
+            inputs=[n_bins_slider],
+            outputs=[brier_output, calibration_plot_output],
+        )
+
+        top_k_slider.change(
+            fn=lambda k: show_high_loss_samples(model, dm.val_dataloader(), device=device, top_k=k, gradio=True),
+            inputs=[top_k_slider],
+            outputs=[high_loss_gallery],
+        )
+
+    # ------------------- Auto Load on App Start -------------------
+    demo.load(
+        fn=get_sample_images,
+        inputs=[split_selector, num_samples_slider],
+        outputs=[smoking_gallery, no_smoking_gallery],
+        queue=False
+    )
+
+    demo.load(
+        fn=generate_plots,
+        inputs=[],
+        outputs=[output1, output2, output3a, output3b],
+        queue=False
+    )
+
+    demo.load(
+        fn=lambda: generate_mean_train(n_train_slider.value) + 
+                generate_mean_val(n_val_slider.value) + 
+                generate_mean_test(n_test_slider.value),
+        inputs=[],
+        outputs=[
+            train_smoking_img, train_no_smoking_img,
+            val_smoking_img, val_no_smoking_img,
+            test_smoking_img, test_no_smoking_img
+        ],
+        queue=False
+    )
+
+    demo.load(
+        fn=lambda: show_high_loss_samples(model, dm.val_dataloader(), device=device, top_k=top_k_slider.value, gradio=True),
+        inputs=[],
+        outputs=[high_loss_gallery],
+        queue=False
+    )
+        
+
+if __name__ == "__main__":
+    demo.launch()
+
