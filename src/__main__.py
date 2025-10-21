@@ -122,30 +122,29 @@ def compute_mean_images_from_dataset(dataset, class_names, n_samples=50, img_siz
     
     return mean_images
 
-def generate_mean_images(n_train, n_val, n_test):
+def generate_mean_train(n_train):
     class_names = ["smoking", "no_smoking"]
-
-    # Load datasets
     dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4)
     dm.setup()
-    train_dataset = dm.train_dataset
-    val_dataset = dm.val_dataset
-    test_dataset = dm.test_dataset
+    mean_train = compute_mean_images_from_dataset(dm.train_dataset, class_names, n_samples=n_train)
+    return mean_train["smoking"], mean_train["no_smoking"]
 
-    # Compute mean images
-    mean_train = compute_mean_images_from_dataset(train_dataset, class_names, n_samples=n_train)
-    mean_val = compute_mean_images_from_dataset(val_dataset, class_names, n_samples=n_val)
-    mean_test = compute_mean_images_from_dataset(test_dataset, class_names, n_samples=n_test)
+def generate_mean_val(n_val):
+    class_names = ["smoking", "no_smoking"]
+    dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4)
+    dm.setup()
+    mean_val = compute_mean_images_from_dataset(dm.val_dataset, class_names, n_samples=n_val)
+    return mean_val["smoking"], mean_val["no_smoking"]
 
-    # Return PIL images (Gradio will show them directly)
-    return (
-        mean_train["smoking"], mean_train["no_smoking"],
-        mean_val["smoking"], mean_val["no_smoking"],
-        mean_test["smoking"], mean_test["no_smoking"]
-    )
+def generate_mean_test(n_test):
+    class_names = ["smoking", "no_smoking"]
+    dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4)
+    dm.setup()
+    mean_test = compute_mean_images_from_dataset(dm.test_dataset, class_names, n_samples=n_test)
+    return mean_test["smoking"], mean_test["no_smoking"]
 
 
-# Gradio interface
+# ------------------ GRADIO INTERFACE ---------------------------------
 with gr.Blocks() as demo:
 
     gr.Markdown("# 🖼️ Smoking Dataset Explorer")
@@ -222,18 +221,22 @@ with gr.Blocks() as demo:
                 test_smoking_img = gr.Image(label="Smoking (Test)")
                 test_no_smoking_img = gr.Image(label="No Smoking (Test)")
 
-        # Button
-        compute_btn = gr.Button("Compute Mean Images")
+        n_train_slider.change(
+            fn=generate_mean_train,
+            inputs=[n_train_slider],
+            outputs=[train_smoking_img, train_no_smoking_img]
+        )
 
-        # Connect function
-        compute_btn.click(
-            fn=generate_mean_images,
-            inputs=[n_train_slider, n_val_slider, n_test_slider],
-            outputs=[
-                train_smoking_img, train_no_smoking_img,
-                val_smoking_img, val_no_smoking_img,
-                test_smoking_img, test_no_smoking_img
-            ]
+        n_val_slider.change(
+            fn=generate_mean_val,
+            inputs=[n_val_slider],
+            outputs=[val_smoking_img, val_no_smoking_img]
+        )
+
+        n_test_slider.change(
+            fn=generate_mean_test,
+            inputs=[n_test_slider],
+            outputs=[test_smoking_img, test_no_smoking_img]
         )
 
     # ------------------- Auto Load on App Start -------------------
@@ -252,16 +255,17 @@ with gr.Blocks() as demo:
     )
 
     demo.load(
-    fn=generate_mean_images,
-    inputs=[n_train_slider, n_val_slider, n_test_slider],
-    outputs=[
-        train_smoking_img, train_no_smoking_img,
-        val_smoking_img, val_no_smoking_img,
-        test_smoking_img, test_no_smoking_img
-    ],
-    queue=False
-)
-
+        fn=lambda: generate_mean_train(n_train_slider.value) + 
+                generate_mean_val(n_val_slider.value) + 
+                generate_mean_test(n_test_slider.value),
+        inputs=[],
+        outputs=[
+            train_smoking_img, train_no_smoking_img,
+            val_smoking_img, val_no_smoking_img,
+            test_smoking_img, test_no_smoking_img
+        ],
+        queue=False
+    )
         
 
 if __name__ == "__main__":
