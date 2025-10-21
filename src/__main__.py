@@ -6,6 +6,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
+import plotly.express as px   # ✅ use Plotly instead of seaborn/matplotlib
 from src.data_loader import SmokerDataModule  # replace with your actual import
 
 # Base paths
@@ -54,7 +55,6 @@ def generate_plots():
     })
     df_classification = df_classification[["name", "genre", "class"]]
 
-
     # Load data module
     dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4)
     dm.setup()
@@ -69,43 +69,36 @@ def generate_plots():
     df = pd.merge(df_classification, df_splits, on="name", how="inner")
 
     # ---- Plot 1: Genre Distribution by Split ----
-    fig1, ax1 = plt.subplots(figsize=(8, 5))
-    sns.countplot(data=df, x="split", hue="genre", palette="colorblind", ax=ax1)
-    ax1.set_title("Genre Distribution by Split")
-    ax1.set_ylabel("Count")
-    ax1.set_xlabel("Split")
-    ax1.legend(title="Genre")
-    plt.tight_layout()
+    fig1 = px.histogram(
+        df, x="split", color="genre",
+        title="Genre Distribution by Split",
+        barmode="group"
+    )
 
     # ---- Plot 2: Class Distribution by Split ----
-    fig2, ax2 = plt.subplots(figsize=(10, 6))
-    sns.countplot(data=df, x="split", hue="class", palette="colorblind", ax=ax2)
-    ax2.set_title("Class Distribution by Split")
-    ax2.set_ylabel("Count")
-    ax2.set_xlabel("Split")
-    ax2.legend(title="Class")
-    plt.tight_layout()
+    fig2 = px.histogram(
+        df, x="split", color="class",
+        title="Class Distribution by Split",
+        barmode="group"
+    )
 
-    # ---- Plot 3 & 4: Genre Distribution by Category and Label ----
+    # ---- Plot 3: Genre Distribution by Category and Label ----
     df_classes["label"] = df_classes["label"].replace({0: "No Smoking", 1:"Smoking"})
     df_cls_genre = pd.merge(df_genre, df_classes, on="name", how="inner")
 
-    fig3, (ax3, ax4) = plt.subplots(1, 2, figsize=(12, 5))
-    sns.countplot(data=df, x="class", hue="genre", palette="colorblind", ax=ax3)
-    ax3.set_title("Genre Distribution By Category")
-    ax3.set_ylabel("Count")
-    ax3.set_xlabel("Class")
-    ax3.legend(title="Genre")
+    # Create a subplot-like layout by combining plots using Gradio layout, not in a single figure
+    fig3a = px.histogram(
+        df, x="class", color="genre",
+        title="Genre Distribution By Category",
+        barmode="group"
+    )
+    fig3b = px.histogram(
+        df_cls_genre, x="label", color="genre",
+        title="Genre Distribution By Label",
+        barmode="group"
+    )
 
-    sns.countplot(data=df_cls_genre, x="label", hue="genre", palette="colorblind", ax=ax4)
-    ax4.set_title("Genre Distribution By Label")
-    ax4.set_ylabel("Count")
-    ax4.set_xlabel("")
-    ax4.legend(title="Genre")
-
-    plt.tight_layout()
-    
-    return fig1, fig2, fig3
+    return fig1, fig2, fig3a, fig3b  # return 4th as a list for flexible layout
 
 # Gradio interface
 with gr.Blocks() as demo:
@@ -141,35 +134,21 @@ with gr.Blocks() as demo:
     # ------------------- Data Analysis Tab -------------------
     with gr.Tab("Data Analysis"):
         gr.Markdown("### 📊 Data Analysis")
-        """
-        
-        with gr.Row():
-            with gr.Column():
-                output1 = gr.Plot(label="Genre Distribution by Split")
-            with gr.Column():
-                output2 = gr.Plot(label="Class Distribution by Split")
-            with gr.Column():
-                output3 = gr.Plot(label="Genre Distribution by Category & Label")
-        
-        """
-
-
         generate_btn = gr.Button("Generate Plots")
 
-        # Arrange plots in columns
         with gr.Row():
-            with gr.Column():
-                output1 = gr.Plot(label="Genre Distribution by Split")
-            with gr.Column():
-                output2 = gr.Plot(label="Class Distribution by Split")
-            with gr.Column():
-                output3 = gr.Plot(label="Genre Distribution by Category & Label")
+            output1 = gr.Plot(label="Genre Distribution by Split")
+            output2 = gr.Plot(label="Class Distribution by Split")
+
+        with gr.Row():
+            output3a = gr.Plot(label="Genre Distribution by Category")
+            output3b = gr.Plot(label="Genre Distribution by Label")
 
         # Connect the button to the function
         generate_btn.click(
             fn=generate_plots,
             inputs=[],
-            outputs=[output1, output2, output3]
+            outputs=[output1, output2, output3a, output3b],
         )
 
     # ------------------- Auto Load on App Start -------------------
@@ -183,7 +162,7 @@ with gr.Blocks() as demo:
     demo.load(
         fn=generate_plots,
         inputs=[],
-        outputs=[output1, output2, output3],
+        outputs=[output1, output2, output3a, output3b],
         queue=False
     )
 
