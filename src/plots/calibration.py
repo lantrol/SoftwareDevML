@@ -5,6 +5,7 @@ from sklearn.calibration import CalibrationDisplay
 from sklearn.metrics import brier_score_loss
 from tqdm import tqdm
 from pathlib import Path
+from PIL import Image
 
 from src.modeling.model import VGG11
 from src.data_loader import SmokerDataModule
@@ -169,11 +170,15 @@ def show_high_loss_samples(model, dataloader, device='cuda', top_k=5, gradio=Fal
         Device to run inference on ("cpu" or "cuda"), by default 'cuda'.
     top_k : int, optional
         Number of highest-loss samples to display, by default 5.
+    gradio : bool, optional
+        If True, return images suitable for Gradio Gallery instead of plotting, by default False.
 
-    Side Effects
-    ------------
-    - Prints indices, losses, true labels, and predicted probabilities of top-loss samples.
-    - Displays images of the top-k high-loss samples using matplotlib.
+    Returns
+    -------
+    If gradio=True:
+        list of PIL.Image objects for top-k high-loss samples
+    Otherwise:
+        Displays a Matplotlib figure
     """
     model.eval()
     all_probs = []
@@ -186,11 +191,11 @@ def show_high_loss_samples(model, dataloader, device='cuda', top_k=5, gradio=Fal
             imgs = imgs.to(device)
             logits = model(imgs)
             probs = torch.softmax(logits, dim=1)
-            
+
             all_probs.append(probs.cpu().numpy())
             all_labels.append(labels.cpu().numpy())
             all_images.append(imgs.cpu())
-    
+
     y_prob = np.concatenate(all_probs, axis=0)
     y_true = np.concatenate(all_labels, axis=0)
     images = torch.cat(all_images, dim=0)
@@ -201,16 +206,24 @@ def show_high_loss_samples(model, dataloader, device='cuda', top_k=5, gradio=Fal
     for idx, loss in zip(top_indices, top_losses):
         print(f"Index {idx}: Loss={loss:.4f}, True={y_true[idx]}, Pred={y_prob[idx]}")
 
-    # Plot the top-k images
-    fig, axes = plt.subplots(1, top_k, figsize=(4*top_k, 4))
-    for i, ax in enumerate(axes):
-        img = images[top_indices[i]].permute(1, 2, 0).numpy()
-        img = np.clip(img, 0, 1)  # if normalized
-        ax.imshow(img)
-        ax.set_title(f"True: {y_true[top_indices[i]]}\nLoss: {top_losses[i]:.4f}")
-        ax.axis('off')
-    plt.tight_layout()
     if gradio:
-        return fig
+        # Convert top-k images to PIL for Gradio
+        pil_images = []
+        for idx in top_indices:
+            img = images[idx].permute(1, 2, 0).numpy()  # [H,W,C]
+            img = np.clip(img * 255, 0, 255).astype(np.uint8)  # scale to 0-255
+            pil_images.append(Image.fromarray(img))
+        return pil_images
     else:
+        # Plot using matplotlib
+        fig, axes = plt.subplots(1, top_k, figsize=(4*top_k, 4))
+        if top_k == 1:
+            axes = [axes]  # Ensure axes is iterable
+        for i, ax in enumerate(axes):
+            img = images[top_indices[i]].permute(1, 2, 0).numpy()
+            img = np.clip(img, 0, 1)
+            ax.imshow(img)
+            ax.set_title(f"True: {y_true[top_indices[i]]}\nLoss: {top_losses[i]:.4f}")
+            ax.axis('off')
+        plt.tight_layout()
         plt.show()

@@ -162,12 +162,6 @@ def calibration_plot_gradio(n_bins):
     fig, brier = simple_calibration_plot(model, dm.val_dataloader(), device=device, n_bins=n_bins, gradio=True)
     return f"{brier:.4f}", fig
 
-# --- Optional: function to get high-loss samples ---
-def high_loss_samples_gradio(top_k):
-    fig = show_high_loss_samples(model, dm.val_dataloader(), device=device, top_k=top_k, gradio=True)
-    return fig
-
-
 # ------------------ GRADIO INTERFACE ---------------------------------
 with gr.Blocks() as demo:
 
@@ -273,7 +267,7 @@ with gr.Blocks() as demo:
 
         with gr.Row():
             calibration_plot_output = gr.Plot(label="Calibration Plot")
-            high_loss_output = gr.Plot(label="Top High-Loss Samples")
+            high_loss_gallery = gr.Gallery(label="Top High-Loss Samples", columns=3, height="auto")
 
         with gr.Row():
             brier_output = gr.Textbox(label="Brier Score")
@@ -286,9 +280,9 @@ with gr.Blocks() as demo:
         )
 
         top_k_slider.change(
-            fn=lambda k: calibration_plot_gradio(k),
+            fn=lambda k: show_high_loss_samples(model, dm.val_dataloader(), device=device, top_k=k, gradio=True),
             inputs=[top_k_slider],
-            outputs=[high_loss_output],
+            outputs=[high_loss_gallery],
         )
 
     # ------------------- Auto Load on App Start -------------------
@@ -316,6 +310,13 @@ with gr.Blocks() as demo:
             val_smoking_img, val_no_smoking_img,
             test_smoking_img, test_no_smoking_img
         ],
+        queue=False
+    )
+
+    demo.load(
+        fn=lambda: show_high_loss_samples(model, dm.val_dataloader(), device=device, top_k=top_k_slider.value, gradio=True),
+        inputs=[],
+        outputs=[high_loss_gallery],
         queue=False
     )
         
