@@ -119,6 +119,72 @@ def simple_calibration_plot(model, dataloader, device='cuda', n_bins=10):
         'true_labels': y_true
     }
 
+def simple_calibration_plot_gradio(model, dataloader, device='cuda', n_bins=10):
+    """
+    Generate a calibration plot (reliability diagram) for a trained model,
+    and return the figure for embedding (e.g., in Gradio).
+    """
+    print("Collecting predictions...")
+
+    # --- Collect predictions and labels ---
+    all_probs = []
+    all_labels = []
+
+    model.eval()
+    with torch.no_grad():
+        for batch in tqdm(dataloader):
+            inputs, labels = batch
+            inputs = inputs.to(device)
+
+            logits = model(inputs)
+            probs = torch.softmax(logits, dim=1)
+
+            all_probs.append(probs.cpu().numpy())
+            all_labels.append(labels.cpu().numpy())
+
+    y_prob = np.concatenate(all_probs, axis=0)
+    y_true = np.concatenate(all_labels, axis=0)
+
+    # --- Binary classification ---
+    if y_prob.shape[1] == 2:
+        pos_probs = y_prob[:, 1]
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        CalibrationDisplay.from_predictions(
+            y_true, pos_probs, n_bins=n_bins, ax=ax, name="Model"
+        )
+        ax.set_title("Calibration Plot (Reliability Diagram)", fontsize=14)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+
+        brier_score = brier_score_loss(y_true, pos_probs)
+
+        # ✅ Return figure (don't save or show)
+        return fig, brier_score
+
+    # --- Multi-class classification ---
+    else:
+        n_classes = y_prob.shape[1]
+        fig, axes = plt.subplots(1, n_classes, figsize=(6 * n_classes, 6))
+        if n_classes == 1:
+            axes = [axes]
+
+        brier_scores = []
+        for i in range(n_classes):
+            binary_true = (y_true == i).astype(int)
+            CalibrationDisplay.from_predictions(
+                binary_true, y_prob[:, i], n_bins=n_bins, ax=axes[i], name=f"Class {i}"
+            )
+            axes[i].set_title(f"Calibration for Class {i}")
+            axes[i].grid(True, alpha=0.3)
+            brier_scores.append(brier_score_loss(binary_true, y_prob[:, i]))
+
+        plt.tight_layout()
+        brier_score = np.mean(brier_scores)
+
+        # ✅ Return figure and mean score
+        return fig, brier_score
+
 def get_high_loss_samples(y_true, y_prob, top_k=5):
     """
     Identify samples with the highest per-sample Brier loss.
@@ -214,3 +280,53 @@ def show_high_loss_samples(model, dataloader, device='cuda', top_k=5):
         ax.axis('off')
     plt.tight_layout()
     plt.show()
+
+def show_high_loss_samples_gradio(model, dataloader, device='cuda', top_k=5):
+    """
+    Return a matplotlib figure of the top-k samples with the highest Brier loss.
+    Compatible with Gradio.
+    """
+    model.eval()
+    all_probs = []
+    all_labels = []
+    all_images = []
+
+    with torch.no_grad():
+        for batch in dataloader:
+            imgs, labels = batch
+            imgs = imgs.to(device)
+            logits = model(imgs)
+            probs = torch.softmax(logits, dim=1)
+            
+            all_probs.append(probs.cpu().numpy())
+            all_labels.append(labels.cpu().numpy())
+            all_images.append(imgs.cpu())
+    
+    y_prob = np.concatenate(all_probs, axis=0)
+    y_true = np.concatenate(all_labels, axis=0)
+    images = torch.cat(all_images, dim=0)
+
+    top_indices, top_losses = get_high_loss_samples(y_true, y_prob, top_k=top_k)
+
+    # ✅ Log info in console (optional)
+    print("Top loss samples:")
+    for idx, loss in zip(top_indices, top_losses):
+        print(f"Index {idx}: Loss={loss:.4f}, True={y_true[idx]}, Pred={y_prob[idx]}")
+
+    # ✅ Create figure instead of showing directly
+    fig, axes = plt.subplots(1, top_k, figsize=(4 * top_k, 4))
+    if top_k == 1:
+        axes = [axes]
+
+    for i, ax in enumerate(axes):
+        img = images[top_indices[i]].permute(1, 2, 0).numpy()
+        img = np.clip(img, 0, 1)
+        ax.imshow(img)
+        ax.set_title(f"True: {y_true[top_indices[i]]}\nLoss: {top_losses[i]:.4f}")
+        ax.axis('off')
+
+    plt.tight_layout()
+
+    # ✅ Return figure (don't call plt.show())
+    return fig
+

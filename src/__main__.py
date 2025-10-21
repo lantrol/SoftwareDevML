@@ -5,13 +5,19 @@ import random
 import pandas as pd
 import numpy as np
 import os
-import plotly.express as px   # ✅ use Plotly instead of seaborn/matplotlib
-from src.data_loader import SmokerDataModule  # replace with your actual import
+import plotly.express as px   
+import torch
+
+from src.data_loader import SmokerDataModule  
+from src.plots.calibration import simple_calibration_plot_gradio, show_high_loss_samples_gradio
+from src.modeling.model import VGG11
+
 
 # Base paths
 BASE_DIR = Path(__file__).resolve().parent.parent  # one level up from /src
-DATASET_DIR = BASE_DIR.parent / "data"
+DATASET_DIR = BASE_DIR / "data"
 DATA_DIR = BASE_DIR / "data" #MODIFY
+CHECKPOINTS_DIR = BASE_DIR / "checkpoints"
 
 # Function to load sample images per class
 def get_sample_images(split="train", n_samples=5):
@@ -85,7 +91,7 @@ def generate_plots():
     df_classes["label"] = df_classes["label"].replace({0: "No Smoking", 1:"Smoking"})
     df_cls_genre = pd.merge(df_genre, df_classes, on="name", how="inner")
 
-    # Create a subplot-like layout by combining plots using Gradio layout, not in a single figure
+    # Create a subplot-like layout
     fig3a = px.histogram(
         df, x="class", color="genre",
         title="Genre Distribution By Category",
@@ -97,7 +103,7 @@ def generate_plots():
         barmode="group"
     )
 
-    return fig1, fig2, fig3a, fig3b  # return 4th as a list for flexible layout
+    return fig1, fig2, fig3a, fig3b  
 
 def compute_mean_images_from_dataset(dataset, class_names, n_samples=50, img_size=(250, 250)):
     imgs_by_class = {cls: [] for cls in class_names}
@@ -142,6 +148,24 @@ def generate_mean_test(n_test):
     dm.setup()
     mean_test = compute_mean_images_from_dataset(dm.test_dataset, class_names, n_samples=n_test)
     return mean_test["smoking"], mean_test["no_smoking"]
+
+# ------------------------ MODEL CALIBRATION ------------------------------------------
+# --- Load model and data ---
+device = "cuda" if torch.cuda.is_available() else "cpu"
+dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4)
+dm.setup()
+model = VGG11.load_from_checkpoint(CHECKPOINTS_DIR / "vgg11-smoker-epoch=02-val_acc=0.88.ckpt")
+model.to(device)
+
+# --- Function to update calibration plot ---
+def calibration_plot_gradio(n_bins):
+    fig, brier = simple_calibration_plot_gradio(model, dm.val_dataloader(), device=device, n_bins=n_bins)
+    return f"{brier:.4f}", fig
+
+# --- Optional: function to get high-loss samples ---
+def high_loss_samples_gradio(top_k):
+    fig = show_high_loss_samples_gradio(model, dm.val_dataloader(), device=device, top_k=top_k)
+    return fig
 
 
 # ------------------ GRADIO INTERFACE ---------------------------------
@@ -237,6 +261,34 @@ with gr.Blocks() as demo:
             fn=generate_mean_test,
             inputs=[n_test_slider],
             outputs=[test_smoking_img, test_no_smoking_img]
+        )
+    # ------------------- Calibration Model Tab -------------------
+    with gr.Tab("Calibration Model"):
+        gr.Markdown("### 🔧 Model Calibration")
+        
+        # Row 1: Calibration plot slider
+        with gr.Row():
+            n_bins_slider = gr.Slider(5, 50, value=10, step=1, label="Calibration bins")
+            top_k_slider = gr.Slider(1, 10, value=5, step=1, label="Top Loss Samples")
+
+        with gr.Row():
+            calibration_plot_output = gr.Plot(label="Calibration Plot")
+            high_loss_output = gr.Plot(label="Top High-Loss Samples")
+
+        with gr.Row():
+            brier_output = gr.Textbox(label="Brier Score")
+
+        # --- Real-time plot updates ---
+        n_bins_slider.change(
+            fn=lambda n: calibration_plot_gradio(n),
+            inputs=[n_bins_slider],
+            outputs=[brier_output, calibration_plot_output],
+        )
+
+        top_k_slider.change(
+            fn=show_high_loss_samples_gradio,
+            inputs=[top_k_slider],
+            outputs=[high_loss_output],
         )
 
     # ------------------- Auto Load on App Start -------------------
