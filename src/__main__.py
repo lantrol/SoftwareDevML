@@ -14,6 +14,7 @@ from src.data_loader import SmokerDataModule
 from src.plots.calibration import simple_calibration_plot, show_high_loss_samples
 from src.modeling.model import VGG11
 from src.modeling.train import train_model
+from src.modeling.predict import load_model, predict
 
 
 # Base paths
@@ -21,6 +22,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent  # one level up from /src
 DATASET_DIR = BASE_DIR / "data"
 DATA_DIR = BASE_DIR / "data" #MODIFY
 CHECKPOINTS_DIR = BASE_DIR / "checkpoints"
+
+# Model
+dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4) 
+dm.setup()
+current_model = None
+current_ckpt = None
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+# function to update the global model when checkpoint changes
+def update_global_model(ckpt_name):
+    global current_model, current_ckpt
+    if not ckpt_name:
+        current_model = None
+        current_ckpt = None
+        return "No checkpoint selected"
+    
+    ckpt_path = CHECKPOINTS_DIR / ckpt_name
+    current_model = load_model(ckpt_path)
+    current_model.to(device)
+    current_ckpt = ckpt_name
+    return f"Loaded checkpoint: {ckpt_name}"
 
 # Function to load sample images per class
 def get_sample_images(split="train", n_samples=5):
@@ -151,7 +173,6 @@ def generate_mean_test(n_test):
     dm.setup()
     mean_test = compute_mean_images_from_dataset(dm.test_dataset, class_names, n_samples=n_test)
     return mean_test["smoking"], mean_test["no_smoking"]
-
 # ------------------------ MODEL TRAINING ---------------------------------------------
 def run_training(batch_size, max_epochs, lr):
     ckpt_path, metrics_path = train_model(batch_size=batch_size, max_epochs=max_epochs, lr=lr)
@@ -165,10 +186,22 @@ def list_checkpoints():
     return [f for f in os.listdir(ckpt_dir) if f.endswith(".ckpt")]
 
 
-def load_metrics(ckpt_name):
+def load_metrics_global(ckpt_name):
+    """
+    Load training metrics for the specified checkpoint.
+
+    Returns:
+        info_text (str): Info message about checkpoint/metrics.
+        acc_text (str): Markdown string showing final validation accuracy.
+        loss_fig (plotly figure): Loss curves.
+        acc_fig (plotly figure): Accuracy curve.
+    """
+    if not ckpt_name:
+        return "No checkpoint selected", "", None, None
+    
     metrics_path = os.path.join("reports", "data", f"{os.path.splitext(ckpt_name)[0]}_metrics.pkl")
     if not os.path.exists(metrics_path):
-        return f"No metrics found for {ckpt_name}", None, None, None
+        return f"No metrics found for {ckpt_name}", "", None, None
 
     with open(metrics_path, "rb") as f:
         metrics = pickle.load(f)
@@ -176,14 +209,11 @@ def load_metrics(ckpt_name):
     train_losses = metrics["train_losses"]
     val_losses = metrics["val_losses"]
     val_accs = metrics["val_accs"]
-    if not val_accs:
-        final_val_acc = None
-    else:
-        final_val_acc = val_accs[-1]
+    final_val_acc = val_accs[-1] if val_accs else None
 
-    # --- Convert to DataFrame for Plotly Express ---
     min_len = min(len(train_losses), len(val_losses))
     epochs = list(range(1, min_len + 1))
+    
     df_loss = pd.DataFrame({
         "Epoch": epochs + epochs,
         "Loss": train_losses[:min_len] + val_losses[:min_len],
@@ -196,7 +226,6 @@ def load_metrics(ckpt_name):
         "Type": ["Validation"] * len(val_accs),
     })
 
-    # --- Plot using Plotly Express ---
     loss_fig = px.line(df_loss, x="Epoch", y="Loss", color="Type", markers=True, title="Loss Curves")
     acc_fig = px.line(df_acc, x="Epoch", y="Accuracy", color="Type", markers=True, title="Validation Accuracy")
 
@@ -207,12 +236,17 @@ def load_metrics(ckpt_name):
     )
 
     return f"Metrics for {ckpt_name}", acc_text, loss_fig, acc_fig
+# ----------------------MODEL CALIBRATION -----------------------------
+def calibration_plot_global(n_bins):
+    if current_model is None:
+        return "No checkpoint loaded", None
+    fig, brier = simple_calibration_plot(current_model, dm.val_dataloader(), device=device, n_bins=n_bins, gradio=True)
+    return f"{brier:.4f}", fig
 
-# ------------------------ MODEL CALIBRATION ------------------------------------------
-device = "cuda" if torch.cuda.is_available() else "cpu" 
-dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4) 
-dm.setup()
-
+def high_loss_global(top_k):
+    if current_model is None:
+        return []
+    return show_high_loss_samples(current_model, dm.val_dataloader(), device=device, top_k=top_k, gradio=True)
 # ------------------ GRADIO INTERFACE ---------------------------------
 with gr.Blocks() as demo:
     gr.Markdown("# 🖼️ Smoking Dataset Explorer")
@@ -225,9 +259,17 @@ with gr.Blocks() as demo:
             interactive=True
         )
         refresh_btn = gr.Button("🔄 Refresh List")
+        # Add this status textbox here (OPTIONAL but helpful)
+    ckpt_status = gr.Textbox(label="Checkpoint Status", interactive=False)
 
     # refresh button updates the dropdown list
     refresh_btn.click(lambda: gr.update(choices=list_checkpoints()), outputs=ckpt_dropdown)
+    # So it loads the model
+    ckpt_dropdown.change(
+        fn=update_global_model,
+        inputs=[ckpt_dropdown],
+        outputs=[ckpt_status]
+    )
     
     with gr.Tab("Data Exploration"):
         split_selector = gr.Dropdown(
@@ -345,11 +387,13 @@ with gr.Blocks() as demo:
             with gr.Column():
                 acc_plot = gr.Plot(label="Accuracy Curve")
 
+        # Update plots whenever checkpoint changes
         ckpt_dropdown.change(
-            load_metrics, 
-            inputs=ckpt_dropdown, 
+            fn=lambda ckpt_name: load_metrics_global(ckpt_name),
+            inputs=[ckpt_dropdown],
             outputs=[info_output, acc_text, loss_plot, acc_plot]
         )
+
 
     # ------------------- Calibration Model Tab -------------------
     with gr.Tab("Calibration Model"):
@@ -366,50 +410,49 @@ with gr.Blocks() as demo:
 
         brier_output = gr.Textbox(label="Brier Score")
 
-        # --- Function: dynamically load model from checkpoint and generate calibration plot ---
-        def calibration_plot_with_ckpt(ckpt_name, n_bins):
-            if not ckpt_name:
-                return "No checkpoint selected", None
-            ckpt_path = CHECKPOINTS_DIR / ckpt_name
-            model = VGG11.load_from_checkpoint(ckpt_path)
-            model.to(device)
-            fig, brier = simple_calibration_plot(model, dm.val_dataloader(), device=device, n_bins=n_bins, gradio=True)
-            return f"{brier:.4f}", fig
-
-        # --- Function: dynamically load model and show top-k high loss samples ---
-        def high_loss_with_ckpt(ckpt_name, top_k):
-            if not ckpt_name:
-                return []
-            ckpt_path = CHECKPOINTS_DIR / ckpt_name
-            model = VGG11.load_from_checkpoint(ckpt_path)
-            model.to(device)
-            return show_high_loss_samples(model, dm.val_dataloader(), device=device, top_k=top_k, gradio=True)
-
         # Connect sliders to functions
-        n_bins_slider.change(
-            fn=calibration_plot_with_ckpt,
-            inputs=[ckpt_dropdown, n_bins_slider],
-            outputs=[brier_output, calibration_plot_output]
-        )
+        n_bins_slider.change(fn=calibration_plot_global, inputs=[n_bins_slider], outputs=[brier_output, calibration_plot_output])
+        top_k_slider.change(fn=high_loss_global, inputs=[top_k_slider], outputs=[high_loss_gallery])
 
-        top_k_slider.change(
-            fn=high_loss_with_ckpt,
-            inputs=[ckpt_dropdown, top_k_slider],
-            outputs=[high_loss_gallery]
-        )
+        # Also update plots if checkpoint changes
+        ckpt_dropdown.change(fn=calibration_plot_global, inputs=[n_bins_slider], outputs=[brier_output, calibration_plot_output])
+        ckpt_dropdown.change(fn=high_loss_global, inputs=[top_k_slider], outputs=[high_loss_gallery])
 
-        # Optional: update plots immediately when checkpoint changes
-        ckpt_dropdown.change(
-            fn=calibration_plot_with_ckpt,
-            inputs=[ckpt_dropdown, n_bins_slider],
-            outputs=[brier_output, calibration_plot_output]
-        )
-        ckpt_dropdown.change(
-            fn=high_loss_with_ckpt,
-            inputs=[ckpt_dropdown, top_k_slider],
-            outputs=[high_loss_gallery]
-        )
+    # ------------------- Predictions Tab -------------------
+    with gr.Tab("🧪 Predictions"):
+        gr.Markdown("### Make Predictions on a Dataset Split")
 
+        split_selector = gr.Dropdown(
+            choices=["train", "val", "test"],
+            value="val",
+            label="Dataset Split"
+        )
+        predict_btn = gr.Button("Predict")
+        prediction_output = gr.Dataframe(headers=["Filename", "True Label", "Predicted Label"])
+
+        def predict_global(split_name):
+            if current_model is None:
+                return pd.DataFrame([], columns=["Filename", "True Label", "Predicted Label"])
+
+            if split_name == "train":
+                dataloader = dm.train_dataloader()
+            elif split_name == "val":
+                dataloader = dm.val_dataloader()
+            else:
+                dataloader = dm.test_dataloader()
+
+            preds = predict(current_model, dataloader, device=device)
+            samples = dataloader.dataset.samples
+            filenames = [os.path.basename(path) for path, _ in samples]
+            true_labels = [dm.train_dataset.classes[idx] for _, idx in samples]
+
+            return pd.DataFrame({
+                "Filename": filenames,
+                "True Label": true_labels,
+                "Predicted Label": preds
+            })
+
+        predict_btn.click(fn=predict_global, inputs=[split_selector], outputs=[prediction_output])
     # ------------------- Auto Load on App Start -------------------
     demo.load(
         fn=get_sample_images,
