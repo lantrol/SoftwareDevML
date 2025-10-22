@@ -73,16 +73,18 @@ def train_model(data_dir="../data", batch_size=32, max_epochs=10, lr=1e-3):
         'val_accs': net.val_accs
     }
 
-    # Define relative path
-    save_dir = os.path.join('reports', 'data')
-    save_path = os.path.join(save_dir, 'training_metrics.pkl')
-
-    # Make sure the directory exists
+    # Derive metrics filename from checkpoint name
+    ckpt_name = os.path.splitext(os.path.basename(checkpoint_callback.best_model_path))[0]
+    save_dir = os.path.join("reports", "data")
     os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, f"{ckpt_name}_metrics.pkl")
 
-    with open(save_path, 'wb') as f:
+    with open(save_path, "wb") as f:
         pickle.dump(metrics_data, f)
+
     print(f"Training metrics saved to '{save_path}'")
+
+    return checkpoint_callback.best_model_path, save_path
 
 if __name__ == "__main__":
     train_model()
