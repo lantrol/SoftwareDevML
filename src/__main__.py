@@ -209,22 +209,25 @@ def load_metrics(ckpt_name):
     return f"Metrics for {ckpt_name}", acc_text, loss_fig, acc_fig
 
 # ------------------------ MODEL CALIBRATION ------------------------------------------
-# --- Load model and data ---
-device = "cuda" if torch.cuda.is_available() else "cpu"
-dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4)
+device = "cuda" if torch.cuda.is_available() else "cpu" 
+dm = SmokerDataModule(data_dir=str(DATASET_DIR), batch_size=32, num_workers=4) 
 dm.setup()
-model = VGG11.load_from_checkpoint(CHECKPOINTS_DIR / "vgg11-smoker-epoch=02-val_acc=0.88.ckpt")
-model.to(device)
-
-# --- Function to update calibration plot ---
-def calibration_plot_gradio(n_bins):
-    fig, brier = simple_calibration_plot(model, dm.val_dataloader(), device=device, n_bins=n_bins, gradio=True)
-    return f"{brier:.4f}", fig
 
 # ------------------ GRADIO INTERFACE ---------------------------------
 with gr.Blocks() as demo:
-
     gr.Markdown("# 🖼️ Smoking Dataset Explorer")
+
+    # -------- Global Checkpoint Selector (outside all tabs) --------
+    with gr.Row():
+        ckpt_dropdown = gr.Dropdown(
+            choices=list_checkpoints(),
+            label="Select Checkpoint File",
+            interactive=True
+        )
+        refresh_btn = gr.Button("🔄 Refresh List")
+
+    # refresh button updates the dropdown list
+    refresh_btn.click(lambda: gr.update(choices=list_checkpoints()), outputs=ckpt_dropdown)
     
     with gr.Tab("Data Exploration"):
         split_selector = gr.Dropdown(
@@ -333,10 +336,6 @@ with gr.Blocks() as demo:
     with gr.Tab("📊 View Performance"):
         gr.Markdown("### Select a Trained Checkpoint")
 
-        with gr.Row():
-            ckpt_dropdown = gr.Dropdown(choices=list_checkpoints(), label="Checkpoint File", interactive=True)
-            refresh_btn = gr.Button("🔄 Refresh List")
-
         info_output = gr.Textbox(label="Model Info", interactive=False)
         acc_text = gr.Markdown("")
 
@@ -351,8 +350,6 @@ with gr.Blocks() as demo:
             inputs=ckpt_dropdown, 
             outputs=[info_output, acc_text, loss_plot, acc_plot]
         )
-        refresh_btn.click(lambda: gr.update(choices=list_checkpoints()), outputs=ckpt_dropdown)
-
 
     # ------------------- Calibration Model Tab -------------------
     with gr.Tab("Calibration Model"):
@@ -367,20 +364,50 @@ with gr.Blocks() as demo:
             calibration_plot_output = gr.Plot(label="Calibration Plot")
             high_loss_gallery = gr.Gallery(label="Top High-Loss Samples", columns=3, height="auto")
 
-        with gr.Row():
-            brier_output = gr.Textbox(label="Brier Score")
+        brier_output = gr.Textbox(label="Brier Score")
 
-        # --- Real-time plot updates ---
+        # --- Function: dynamically load model from checkpoint and generate calibration plot ---
+        def calibration_plot_with_ckpt(ckpt_name, n_bins):
+            if not ckpt_name:
+                return "No checkpoint selected", None
+            ckpt_path = CHECKPOINTS_DIR / ckpt_name
+            model = VGG11.load_from_checkpoint(ckpt_path)
+            model.to(device)
+            fig, brier = simple_calibration_plot(model, dm.val_dataloader(), device=device, n_bins=n_bins, gradio=True)
+            return f"{brier:.4f}", fig
+
+        # --- Function: dynamically load model and show top-k high loss samples ---
+        def high_loss_with_ckpt(ckpt_name, top_k):
+            if not ckpt_name:
+                return []
+            ckpt_path = CHECKPOINTS_DIR / ckpt_name
+            model = VGG11.load_from_checkpoint(ckpt_path)
+            model.to(device)
+            return show_high_loss_samples(model, dm.val_dataloader(), device=device, top_k=top_k, gradio=True)
+
+        # Connect sliders to functions
         n_bins_slider.change(
-            fn=lambda n: calibration_plot_gradio(n),
-            inputs=[n_bins_slider],
-            outputs=[brier_output, calibration_plot_output],
+            fn=calibration_plot_with_ckpt,
+            inputs=[ckpt_dropdown, n_bins_slider],
+            outputs=[brier_output, calibration_plot_output]
         )
 
         top_k_slider.change(
-            fn=lambda k: show_high_loss_samples(model, dm.val_dataloader(), device=device, top_k=k, gradio=True),
-            inputs=[top_k_slider],
-            outputs=[high_loss_gallery],
+            fn=high_loss_with_ckpt,
+            inputs=[ckpt_dropdown, top_k_slider],
+            outputs=[high_loss_gallery]
+        )
+
+        # Optional: update plots immediately when checkpoint changes
+        ckpt_dropdown.change(
+            fn=calibration_plot_with_ckpt,
+            inputs=[ckpt_dropdown, n_bins_slider],
+            outputs=[brier_output, calibration_plot_output]
+        )
+        ckpt_dropdown.change(
+            fn=high_loss_with_ckpt,
+            inputs=[ckpt_dropdown, top_k_slider],
+            outputs=[high_loss_gallery]
         )
 
     # ------------------- Auto Load on App Start -------------------
@@ -408,13 +435,6 @@ with gr.Blocks() as demo:
             val_smoking_img, val_no_smoking_img,
             test_smoking_img, test_no_smoking_img
         ],
-        queue=False
-    )
-
-    demo.load(
-        fn=lambda: show_high_loss_samples(model, dm.val_dataloader(), device=device, top_k=top_k_slider.value, gradio=True),
-        inputs=[],
-        outputs=[high_loss_gallery],
         queue=False
     )
         
