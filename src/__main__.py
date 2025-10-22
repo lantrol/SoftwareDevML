@@ -7,10 +7,13 @@ import numpy as np
 import os
 import plotly.express as px   
 import torch
+import pickle
+import matplotlib.pyplot as plt
 
 from src.data_loader import SmokerDataModule  
 from src.plots.calibration import simple_calibration_plot, show_high_loss_samples
 from src.modeling.model import VGG11
+from src.modeling.train import train_model
 
 
 # Base paths
@@ -149,6 +152,62 @@ def generate_mean_test(n_test):
     mean_test = compute_mean_images_from_dataset(dm.test_dataset, class_names, n_samples=n_test)
     return mean_test["smoking"], mean_test["no_smoking"]
 
+# ------------------------ MODEL TRAINING ---------------------------------------------
+def run_training(batch_size, max_epochs, lr):
+    ckpt_path, metrics_path = train_model(batch_size=batch_size, max_epochs=max_epochs, lr=lr)
+    return f"✅ Training complete!\nCheckpoint: {ckpt_path}\nMetrics: {metrics_path}"
+
+
+def list_checkpoints():
+    ckpt_dir = "checkpoints"
+    if not os.path.exists(ckpt_dir):
+        return []
+    return [f for f in os.listdir(ckpt_dir) if f.endswith(".ckpt")]
+
+
+def load_metrics(ckpt_name):
+    metrics_path = os.path.join("reports", "data", f"{os.path.splitext(ckpt_name)[0]}_metrics.pkl")
+    if not os.path.exists(metrics_path):
+        return f"No metrics found for {ckpt_name}", None, None, None
+
+    with open(metrics_path, "rb") as f:
+        metrics = pickle.load(f)
+
+    train_losses = metrics["train_losses"]
+    val_losses = metrics["val_losses"]
+    val_accs = metrics["val_accs"]
+    if not val_accs:
+        final_val_acc = None
+    else:
+        final_val_acc = val_accs[-1]
+
+    # --- Convert to DataFrame for Plotly Express ---
+    min_len = min(len(train_losses), len(val_losses))
+    epochs = list(range(1, min_len + 1))
+    df_loss = pd.DataFrame({
+        "Epoch": epochs + epochs,
+        "Loss": train_losses[:min_len] + val_losses[:min_len],
+        "Type": ["Train"] * min_len + ["Validation"] * min_len,
+    })
+
+    df_acc = pd.DataFrame({
+        "Epoch": list(range(1, len(val_accs) + 1)),
+        "Accuracy": val_accs,
+        "Type": ["Validation"] * len(val_accs),
+    })
+
+    # --- Plot using Plotly Express ---
+    loss_fig = px.line(df_loss, x="Epoch", y="Loss", color="Type", markers=True, title="Loss Curves")
+    acc_fig = px.line(df_acc, x="Epoch", y="Accuracy", color="Type", markers=True, title="Validation Accuracy")
+
+    acc_text = (
+        f"### 🏁 Final Validation Accuracy: **{final_val_acc:.2f}**"
+        if final_val_acc is not None
+        else "No accuracy data available."
+    )
+
+    return f"Metrics for {ckpt_name}", acc_text, loss_fig, acc_fig
+
 # ------------------------ MODEL CALIBRATION ------------------------------------------
 # --- Load model and data ---
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -256,6 +315,45 @@ with gr.Blocks() as demo:
             inputs=[n_test_slider],
             outputs=[test_smoking_img, test_no_smoking_img]
         )
+
+    # ----------------- Train model tab --------------------------
+    with gr.Tab("🧠 Train New Model"):
+        gr.Markdown("### Set Hyperparameters")
+
+        batch_size = gr.Slider(8, 128, value=32, step=8, label="Batch Size")
+        max_epochs = gr.Slider(1, 50, value=10, step=1, label="Max Epochs")
+        lr = gr.Slider(1e-5, 1e-2, value=1e-3, step=1e-5, label="Learning Rate")
+
+        train_btn = gr.Button("🚀 Start Training")
+        train_output = gr.Textbox(label="Training Log")
+
+        train_btn.click(run_training, inputs=[batch_size, max_epochs, lr], outputs=train_output)
+
+    # ----------------- Model performance tab --------------------------
+    with gr.Tab("📊 View Performance"):
+        gr.Markdown("### Select a Trained Checkpoint")
+
+        with gr.Row():
+            ckpt_dropdown = gr.Dropdown(choices=list_checkpoints(), label="Checkpoint File", interactive=True)
+            refresh_btn = gr.Button("🔄 Refresh List")
+
+        info_output = gr.Textbox(label="Model Info", interactive=False)
+        acc_text = gr.Markdown("")
+
+        with gr.Row():
+            with gr.Column():
+                loss_plot = gr.Plot(label="Loss Curves")
+            with gr.Column():
+                acc_plot = gr.Plot(label="Accuracy Curve")
+
+        ckpt_dropdown.change(
+            load_metrics, 
+            inputs=ckpt_dropdown, 
+            outputs=[info_output, acc_text, loss_plot, acc_plot]
+        )
+        refresh_btn.click(lambda: gr.update(choices=list_checkpoints()), outputs=ckpt_dropdown)
+
+
     # ------------------- Calibration Model Tab -------------------
     with gr.Tab("Calibration Model"):
         gr.Markdown("### 🔧 Model Calibration")
