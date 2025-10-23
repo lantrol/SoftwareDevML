@@ -37,3 +37,7 @@ On the terminal it will tell you what its doing and automatically launch a brows
 ## Report 
 
 Found [here](reports/performance_report.pdf)
+
+## Package documentation
+
+Found [here](https://lantrol.github.io/SoftwareDevML/)
