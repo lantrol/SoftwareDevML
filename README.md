@@ -1,28 +1,29 @@
 # SoftwareDevML
 
+This is a project developped for the subject Software Development Oriented to Machine Learning taken in Machine Learning Master at Public University of Navarre (UPNa/ NUP).
+
+The goal is to use a VGG11 to solve a classification problem to assess whether an image contains a smoker or not.
+
+This repository will not receive any more support.
+
 ## Authors
 
 Lander Jiménez & María Goicoechea
 
 ## Dataset used
 
+It will be automatically downloaded when installing the package.
+From Kaggle:
 [Smoker Detection [Image] classification Dataset (Version 5)](https://www.kaggle.com/datasets/sujaykapadnis/smoking)
 
 ## Requirements
 
- ```
-Python = 3.11
-torch: 2.8.0+cpu        
-torchvision: 0.23.0+cpu 
-pytorch_lightning: 2.5.5
-matplotlib: 3.10.6      
-requests: 2.32.5   
-tqdm: 4.67.1 
-```
+All are established on the pyproject.toml and will be automatically solved once you download the package.
 
 ## How to get it working
 
-1. Run src/dataset_download.py, that will download and organise the dataset into a data folder.
-    - Optionally you can run dataset_loader_tester.py if you want to take a peek at what the dataset contains
-2. Run src/model.py to start classifying.
-    - It will output the results on the console and create a logs folder-
+Execute:
+
+``` bash
+uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ --from smoking_prediction smoking-prediction
+```
