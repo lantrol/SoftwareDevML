@@ -3,8 +3,8 @@ import os
 import pickle
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
-from src.modeling.model import VGG11
-from src.data_loader import SmokerDataModule
+from smoking_prediction.modeling.model import VGG11
+from smoking_prediction.data_loader import SmokerDataModule
 
 
 def train_model(base_dir="../", batch_size=32, max_epochs=10, lr=1e-3):

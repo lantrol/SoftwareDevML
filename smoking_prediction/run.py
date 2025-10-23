@@ -13,12 +13,12 @@ import shutil
 import pickle
 import matplotlib.pyplot as plt
 
-from src.data_loader import SmokerDataModule  
-from src.plots.calibration import simple_calibration_plot, show_high_loss_samples
-from src.modeling.model import VGG11
-from src.modeling.train import train_model
-from src.modeling.predict import load_model, predict
-from src import dataset_download
+from smoking_prediction.data_loader import SmokerDataModule  
+from smoking_prediction.plots.calibration import simple_calibration_plot, show_high_loss_samples
+from smoking_prediction.modeling.model import VGG11
+from smoking_prediction.modeling.train import train_model
+from smoking_prediction.modeling.predict import load_model, predict
+from smoking_prediction import dataset_download
         
 
 def run(argv=sys.argv):
@@ -38,7 +38,7 @@ def run(argv=sys.argv):
     print("Gradio starting...")
 
     # Base paths
-    # BASE_DIR = Path(__file__).resolve().parent.parent  # one level up from /src
+    # BASE_DIR = Path(__file__).resolve().parent.parent  # one level up from /
     PKG_DIR = Path(dataset_download.__file__).resolve().parent
     BASE_DIR = Path(user_data_dir("smoking_gradio"))
     DATASET_DIR = BASE_DIR / "data"

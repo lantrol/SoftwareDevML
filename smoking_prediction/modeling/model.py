@@ -3,7 +3,7 @@ from torchvision import datasets, transforms, models
 from torch.utils.data import Subset
 import random
 from tqdm import tqdm
-from src.data_loader import SmokerDataModule
+from smoking_prediction.data_loader import SmokerDataModule
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 import pickle

@@ -6,15 +6,15 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import pytorch_lightning as pl
 import numpy as np
 
-from src.modeling.model import VGG11
-from src.data_loader import SmokerDataModule
+from smoking_prediction.modeling.model import VGG11
+from smoking_prediction.data_loader import SmokerDataModule
 
 if __name__ == "__main__":
     # --- Device ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # --- Load checkpoint ---
-    BASE_DIR = Path(__file__).parent          # -> SoftwareDevML/src
+    BASE_DIR = Path(__file__).parent          # -> SoftwareDevML/
     CHECKPOINT_DIR = BASE_DIR.parent / "checkpoints"  # -> SoftwareDevML/checkpoints
     ckpt_path = CHECKPOINT_DIR / "vgg11-smoker-epoch=02-val_acc=0.88.ckpt"
     print("Resolved checkpoint path:", ckpt_path)
