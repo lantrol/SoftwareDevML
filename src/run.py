@@ -22,6 +22,19 @@ from src import dataset_download
         
 
 def run(argv=sys.argv):
+    """
+    Entry point for the Smoking Prediction package.
+
+    This function sets up and launches a Gradio interface for exploring a smoking dataset. 
+    It allows users to load different models, make predictions on images, train new models, 
+    analyze data distributions, and visualize model performance.
+
+    Usage:
+        This function is intended to be used as an entry point for the PyPI installation.
+        Once the package has been installed through PyPI, run the gradio interface by executing
+        "smoking-prediction" in the terminal.
+    """
+
     print("Gradio starting...")
 
     # Base paths
@@ -269,9 +282,9 @@ def run(argv=sys.argv):
 
     def predict_image(image): 
         img = torch.tensor(image, dtype=torch.float32, device= current_model.device).swapaxes(2, 0).swapaxes(1, 2)[torch.newaxis, :]/255
-        pred = current_model(img).argmax(dim=1)
-        return "✅ Smoking" if pred == 1 else "❌ Not Smoking"
-
+        preds = torch.nn.functional.softmax(current_model(img), dim=1)
+        pred = preds.argmax(dim=1)
+        return f"✅ Smoking" if pred == 1 else f"❌ Not Smoking", f"{preds[0, pred].item():.3f}"
     # ------------------ GRADIO INTERFACE ---------------------------------
     with gr.Blocks() as demo:
         gr.Markdown("# 🖼️ Smoking Dataset Explorer")
@@ -297,7 +310,7 @@ def run(argv=sys.argv):
         )
 
         # ---------------- Prediction Tab ---------------
-        with gr.Tab("Use Model"):
+        with gr.Tab("🚀 Use Model"):
             gr.Markdown("#### Upload an Image to predict!")
             with gr.Row():
                 with gr.Column():
@@ -305,12 +318,15 @@ def run(argv=sys.argv):
                         sources=["upload", "clipboard"]
                     )
                     pred_img_button = gr.Button("Predict")
-
-                prediction = gr.Text(
-                    label="Is it smoking?"
-                )
+                with gr.Column():
+                    prediction = gr.Text(
+                        label="Is it smoking?"
+                    )
+                    certainty = gr.Text(
+                        label="Certainty"
+                    )
             
-            pred_img_button.click(predict_image, inputs=[upload_image], outputs=[prediction])
+            pred_img_button.click(predict_image, inputs=[upload_image], outputs=[prediction, certainty])
         
         # ----------------- Train model tab --------------------------
         with gr.Tab("🧠 Train New Model"):
@@ -463,7 +479,7 @@ def run(argv=sys.argv):
                 ckpt_dropdown.change(fn=high_loss_global, inputs=[top_k_slider], outputs=[high_loss_gallery])
 
             # ------------------- Predictions Tab -------------------
-            with gr.Tab("🧪 Predictions"):
+            with gr.Tab("Predictions"):
                 gr.Markdown("### Make Predictions on a Dataset Split")
 
                 split_selector = gr.Dropdown(
@@ -533,3 +549,5 @@ def run(argv=sys.argv):
 
     demo.launch()
 
+if __name__ == "__main__":
+    run()
