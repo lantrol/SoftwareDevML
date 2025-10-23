@@ -27,3 +27,12 @@ Execute:
 ``` bash
 uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ --from smoking_prediction smoking-prediction
 ```
+
+On the terminal it will tell you what its doing and automatically launch a browser view in your local net where you can:
+1. Interact with the dataset
+2. Train your own model choosing your hyperparameters
+3. View the performance of a trained model
+
+## Report 
+
+Found inside
