@@ -3,8 +3,8 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "src"
-version = "0.1.0"
+name = "smoking_prediction"
+version = "0.2.0"
 description = "ML project for smoker classification"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
@@ -16,5 +16,14 @@ dependencies = [
     "pytorch_lightning==2.5.5",
     "matplotlib==3.10.6",
     "requests==2.32.5",
-    "tqdm==4.67.1"
+    "tqdm==4.67.1",
+    "gradio==5.49.1",
+    "pandas",
+    "numpy",
+    "plotly",
+    "scikit-learn",
+    "platformdirs",
 ]
+
+[project.scripts]
+smoking-prediction = "src.run:run"

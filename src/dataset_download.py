@@ -4,15 +4,17 @@ import zipfile
 import string
 import requests
 
-def download_dataset():
+def download_dataset(base_path: string):
     """
     Script to download the dataset and create the folder structure required to use the
     model dataloaders and train the model.
     """
 
+    print("Downloading dataset...")
+
     dataset_url = "https://www.kaggle.com/api/v1/datasets/download/sujaykapadnis/smoking"
-    data_path = "./data/"
-    raw_data_path = "./data/raw/"
+    data_path = base_path + "/data/"
+    raw_data_path = base_path + "/data/raw/"
     file_name = "archive.zip"
 
     # Initial setup
@@ -59,6 +61,8 @@ def download_dataset():
 
         with open(data_path+folder+cls+file_name[-1], 'wb') as f:
             f.write(zip_file.read(file_info.filename))
+    
+    print("Finished!")
 
 if __name__ == "__main__":
-    download_dataset()
+    download_dataset("./")

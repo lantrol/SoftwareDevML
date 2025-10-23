@@ -7,14 +7,14 @@ from src.modeling.model import VGG11
 from src.data_loader import SmokerDataModule
 
 
-def train_model(data_dir="../data", batch_size=32, max_epochs=10, lr=1e-3):
+def train_model(base_dir="../", batch_size=32, max_epochs=10, lr=1e-3):
     """
     Train a VGG11 model on the Smoker dataset using PyTorch Lightning.
 
     Parameters
     ----------
     data_dir : str, optional
-        Path to the dataset directory (default is "../data").
+        Base directory where dataset is located and checkpoints are saved
     batch_size : int, optional
         Batch size for training and validation (default is 32).
     max_epochs : int, optional
@@ -31,16 +31,16 @@ def train_model(data_dir="../data", batch_size=32, max_epochs=10, lr=1e-3):
     """
     # --- Check GPU availability ---
     accelerator = "gpu" if torch.cuda.is_available() else "cpu"
-    devices = 1 if torch.cuda.is_available() else None
+    devices = 1 if torch.cuda.is_available() else "auto"
     print(f"Using accelerator: {accelerator}, devices: {devices or 'CPU'}")
 
      # --- Initialize data module and model ---
-    data_module = SmokerDataModule(data_dir=data_dir, batch_size=batch_size, num_workers=0)
+    data_module = SmokerDataModule(data_dir=base_dir + "/data", batch_size=batch_size, num_workers=0)
     net = VGG11(lr=lr)
 
     # --- Checkpoint callback ---
     checkpoint_callback = ModelCheckpoint(
-        dirpath="checkpoints",
+        dirpath=base_dir + "/checkpoints",
         filename="vgg11-smoker-{epoch:02d}-{val_acc:.2f}",
         save_top_k=1,
         monitor="val_acc",
@@ -75,7 +75,7 @@ def train_model(data_dir="../data", batch_size=32, max_epochs=10, lr=1e-3):
 
     # Derive metrics filename from checkpoint name
     ckpt_name = os.path.splitext(os.path.basename(checkpoint_callback.best_model_path))[0]
-    save_dir = os.path.join("reports", "data")
+    save_dir = os.path.join(base_dir, "reports", "data")
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, f"{ckpt_name}_metrics.pkl")
 
