@@ -7,7 +7,7 @@ from smoking_prediction.modeling.model import VGG11
 from smoking_prediction.data_loader import SmokerDataModule
 
 
-def train_model(base_dir="../", batch_size=32, max_epochs=10, lr=1e-3):
+def train_model(base_dir="", batch_size=32, max_epochs=10, lr=1e-3):
     """
     Train a VGG11 model on the Smoker dataset using PyTorch Lightning.
 
@@ -87,6 +87,6 @@ def train_model(base_dir="../", batch_size=32, max_epochs=10, lr=1e-3):
     return checkpoint_callback.best_model_path, save_path
 
 if __name__ == "__main__":
-    train_model()
+    train_model("../")
     #print('All imports done right')
     pass

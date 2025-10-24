@@ -21,7 +21,7 @@ from smoking_prediction.modeling.predict import load_model, predict
 from smoking_prediction import dataset_download
         
 
-def run(argv=sys.argv):
+def run():
     """
     Entry point for the Smoking Prediction package.
 

@@ -4,7 +4,7 @@ import zipfile
 import string
 import requests
 
-def download_dataset(base_path: string):
+def download_dataset(base_path: str):
     """
     Script to download the dataset and create the folder structure required to use the
     model dataloaders and train the model.

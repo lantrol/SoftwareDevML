@@ -15,7 +15,7 @@ class SmokerDataModule(pl.LightningDataModule):
     ----------
     data_dir : str, optional
         Root directory containing 'train', 'val', and 'test' subfolders 
-        (default "../data").
+        (default "data").
     batch_size : int, optional
         Batch size for the DataLoaders (default 32).
     num_workers : int, optional
@@ -32,7 +32,7 @@ class SmokerDataModule(pl.LightningDataModule):
     test_dataset : torchvision.datasets.ImageFolder
         Test dataset.
     """
-    def __init__(self, data_dir: str =  "../data", batch_size = 32, num_workers=8):
+    def __init__(self, data_dir: str =  "data", batch_size = 32, num_workers=8):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
