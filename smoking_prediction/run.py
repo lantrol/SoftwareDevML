@@ -280,8 +280,9 @@ def run():
             return []
         return show_high_loss_samples(current_model, dm.val_dataloader(), device=device, top_k=top_k, gradio=True)
 
-    def predict_image(image): 
-        img = torch.tensor(image, dtype=torch.float32, device= current_model.device).swapaxes(2, 0).swapaxes(1, 2)[torch.newaxis, :]/255
+    def predict_image(image):
+        resized = Image.fromarray(image).resize((250, 250), Image.Resampling.BILINEAR)
+        img = torch.tensor(np.array(resized), dtype=torch.float32, device= current_model.device).swapaxes(2, 0).swapaxes(1, 2)[torch.newaxis, :]/255
         preds = torch.nn.functional.softmax(current_model(img), dim=1)
         pred = preds.argmax(dim=1)
         return f"✅ Smoking" if pred == 1 else f"❌ Not Smoking", f"{preds[0, pred].item():.3f}"
