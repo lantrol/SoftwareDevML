@@ -1,6 +1,6 @@
-from src.modeling.model import VGG11
-from src.data_loader import SmokerDataModule
-from src.plots.calibration import simple_calibration_plot, show_high_loss_samples
+from smoking_prediction.modeling.model import VGG11
+from smoking_prediction.data_loader import SmokerDataModule
+from smoking_prediction.plots.calibration import simple_calibration_plot, show_high_loss_samples
 import torch
 from pathlib import Path
 

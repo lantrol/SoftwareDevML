@@ -22,10 +22,10 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "smoking-prediction = src.run:run",
+            "smoking-prediction = smoking_prediction.run:run",
         ]
     },
     package_data={
-        "src": ["checkpoints/*.ckpt", "data/*", "reports/*"]
+        "smoking_prediction": ["checkpoints/*.ckpt", "data/*", "reports/*"]
     },
 )

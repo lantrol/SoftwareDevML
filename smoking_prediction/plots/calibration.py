@@ -7,8 +7,8 @@ from tqdm import tqdm
 from pathlib import Path
 from PIL import Image
 
-from src.modeling.model import VGG11
-from src.data_loader import SmokerDataModule
+from smoking_prediction.modeling.model import VGG11
+from smoking_prediction.data_loader import SmokerDataModule
 
 def simple_calibration_plot(model, dataloader, device='cuda', n_bins=10, gradio=False):
     """

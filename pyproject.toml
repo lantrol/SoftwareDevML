@@ -26,4 +26,4 @@ dependencies = [
 ]
 
 [project.scripts]
-smoking-prediction = "src.run:run"
+smoking-prediction = "smoking_prediction.run:run"

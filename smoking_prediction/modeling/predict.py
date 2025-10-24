@@ -1,6 +1,6 @@
 import torch
-from src.modeling.model import VGG11
-from src.data_loader import SmokerDataModule
+from smoking_prediction.modeling.model import VGG11
+from smoking_prediction.data_loader import SmokerDataModule
 
 def load_model(checkpoint_path, lr=1e-3):
     """

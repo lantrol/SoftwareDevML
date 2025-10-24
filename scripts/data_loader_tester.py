@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import torchvision
-from src.data_loader import SmokerDataModule
+from smoking_prediction.data_loader import SmokerDataModule
 
 def show_batch(loader, class_names, n=8):
     xb, yb = next(iter(loader))  # one batch
